@@ -1,2 +1,3 @@
-# IoT-Plug-and-Play-Workshop-Functions
-Sample Functions App for IoT Plug and Play Workshop
+# Sample Azure Functions app for IoT Plug and Play workshop
+
+[IoT Plug and Play workshop](https://github.com/microsoft/IoT-Plug-and-Play-Workshop)
