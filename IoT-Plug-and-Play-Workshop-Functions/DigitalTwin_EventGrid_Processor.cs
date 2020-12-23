@@ -60,8 +60,6 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                         // Find Unit ID from cached list
                         MapUnit unit = UnitList.Find(x => x.twinId == twinId);
 
-                        log.LogInformation($"UnitList {unit}");
-
                         if (unit == null)
                         {
                             log.LogInformation("Unit Not Found");
@@ -80,7 +78,9 @@ namespace IoT_Plug_and_Play_Workshop_Functions
 
                                         if (string.IsNullOrEmpty(unitId))
                                         {
+                                            log.LogInformation($"Getting Unit ID from Azure Map");
                                             unitId = await getUnitId(_adtClient, twinId, log);
+                                            log.LogInformation($"Got Unit ID from Azure Map {unitId}");
                                         }
 
                                         // Cache unit ID
