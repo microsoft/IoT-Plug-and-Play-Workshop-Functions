@@ -261,9 +261,9 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                         var updateResponse = await _adtClient.UpdateDigitalTwinAsync(deviceId, twinPatchData);
                         log.LogInformation($"ADT Response : {updateResponse.Status}");
                     }
-                    catch (Exception e)
+                    catch (RequestFailedException e)
                     {
-                        log.LogError($"Error ADT : {e.Message}");
+                        log.LogError($"Error UpdateDigitalTwinAsync():{e.Status}/{e.ErrorCode} : {e.Message}");
                     }
                 }
             }
