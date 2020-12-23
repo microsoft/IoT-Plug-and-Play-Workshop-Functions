@@ -67,11 +67,10 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                             {
                                 // Make sure digital twin node exist for this device
                                 var query = $"SELECT* FROM digitaltwins Device WHERE Device.$dtId = '{twinId}'";
-                                log.LogInformation($"Query Twin {query}");
-
                                 AsyncPageable<BasicDigitalTwin> asyncPageableResponse = _adtClient.QueryAsync<BasicDigitalTwin>(query);
                                 await foreach (BasicDigitalTwin twin in asyncPageableResponse)
                                 {
+                                    log.LogInformation($"Query Twin Twin ID {twin.Id}");
                                     if (twin.Id == twinId)
                                     {
                                         log.LogInformation($"Query Twin {twin}");
