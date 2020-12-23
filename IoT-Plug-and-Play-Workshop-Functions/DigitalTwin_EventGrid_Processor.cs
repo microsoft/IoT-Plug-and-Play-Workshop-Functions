@@ -69,6 +69,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                                 AsyncPageable<BasicDigitalTwin> asyncPageableResponse = _adtClient.QueryAsync<BasicDigitalTwin>(query);
                                 await foreach (BasicDigitalTwin twin in asyncPageableResponse)
                                 {
+                                    log.LogInformation($"Found Twin {twin.Id} : Room Number {twin.Contents["RoomNumber"]}");
                                     if (twin.Id == twinId)
                                     {
                                         unitId = twin.Contents["UnitId"].ToString();
@@ -205,7 +206,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
 
             using (var client = new HttpClient())
             {
-                log.LogInformation($"Sending Get to {url}");
+                log.LogInformation($"Sending GET to Map {url}");
                 HttpRequestMessage requestMessage = new HttpRequestMessage(HttpMethod.Get, url);
                 var response = await client.SendAsync(requestMessage);
 
