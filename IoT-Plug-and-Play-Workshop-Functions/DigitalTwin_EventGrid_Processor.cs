@@ -30,7 +30,6 @@ namespace IoT_Plug_and_Play_Workshop_Functions
         [FunctionName("DigitalTwin_EventGrid_Processor")]
         public static async Task Run([EventGridTrigger] EventGridEvent eventGridEvent, ILogger log)
         {
-
             if (!string.IsNullOrEmpty(_adtServiceUrl))
             {
                 try
@@ -90,7 +89,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                             {
                                 log.LogInformation("Need Unit ID");
 
-                                var unitId = getUnitId(_adtClient, twinId);
+                                unitId = await getUnitId(_adtClient, twinId);
                             }
                         }
                         else
