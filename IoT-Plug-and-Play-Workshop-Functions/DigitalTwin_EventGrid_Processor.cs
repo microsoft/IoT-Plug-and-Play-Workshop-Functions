@@ -85,12 +85,12 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                             }
 
 
-                            if (string.IsNullOrEmpty(message["data"]["unitId"].ToString()))
-                            {
-                                log.LogInformation("Need Unit ID");
+                            //if (string.IsNullOrEmpty(message["data"]["unitId"].ToString()))
+                            //{
+                            //    log.LogInformation("Need Unit ID");
 
-                                unitId = await getUnitId(_adtClient, twinId, log);
-                            }
+                            //    unitId = await getUnitId(_adtClient, twinId, log);
+                            //}
                         }
                         else
                         {
