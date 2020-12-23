@@ -77,7 +77,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                                         if (string.IsNullOrEmpty(unitId))
                                         {
                                             log.LogInformation($"Getting Unit ID from Azure Map");
-                                            unitId = await getUnitId(_adtClient, twinId, log);
+                                            unitId = await getUnitId(_adtClient, twin.Contents["RoomNumber"].ToString(), log);
                                             log.LogInformation($"Got Unit ID from Azure Map {unitId}");
                                         }
 
