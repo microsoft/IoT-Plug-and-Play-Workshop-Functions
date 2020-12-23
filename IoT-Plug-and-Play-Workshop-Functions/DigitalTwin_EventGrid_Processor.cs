@@ -102,7 +102,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                         else
                         {
                             unitId = unit.unitId;
-                            log.LogInformation($"Cached data unit id {unitId}");
+                            log.LogInformation($"Cached data unit id {unitId} {unitId.Length()}");
                         }
 
                         if (!string.IsNullOrEmpty(_mapKey) && !string.IsNullOrEmpty(_mapStatesetId) && !string.IsNullOrEmpty(unitId))
