@@ -57,12 +57,12 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                     // Process Digital Twin Update Event for the room model
                     if (message["data"]["modelId"].ToString() == "dtmi:com:example:Room;1")
                     {
+                        // Find Unit ID
                         MapUnit unit = UnitList.Find(x => x.twinId == twinId);
-
-                        log.LogInformation($"Search Unit {unit}");
 
                         if (unit == null)
                         {
+                            log.LogInformation("Unit Not Found");
                             try
                             {
                                 // Make sure digital twin node exist for this device
@@ -76,14 +76,18 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                                         log.LogInformation($"Query Twin Unit ID {twin.Contents["UnitId"]}");
                                         unitId = twin.Contents["UnitId"].ToString();
 
-                                        if (!string.IsNullOrEmpty(unitId))
+                                        if (string.IsNullOrEmpty(unitId))
                                         {
-                                            unit = new MapUnit();
-                                            unit.twinId = twinId;
-                                            unit.unitId = unitId;
-                                            UnitList.Add(unit);
+                                            unitId = await getUnitId(_adtClient, twinId, log);
                                         }
-                                    break;
+
+                                        // Cache unit ID
+                                        unit = new MapUnit();
+                                        unit.twinId = twinId;
+                                        unit.unitId = unitId;
+                                        UnitList.Add(unit);
+
+                                        break;
                                     }
                                 }
                             }
@@ -92,14 +96,6 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                                 log.LogError($"Error Searching Digital Twin {twinId} failed : {e.Message}");
                                 return;
                             }
-
-
-                            //if (string.IsNullOrEmpty(message["data"]["unitId"].ToString()))
-                            //{
-                            //    log.LogInformation("Need Unit ID");
-
-                            //    unitId = await getUnitId(_adtClient, twinId, log);
-                            //}
                         }
                         else
                         {
