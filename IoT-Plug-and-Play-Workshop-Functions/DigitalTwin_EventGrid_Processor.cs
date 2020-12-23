@@ -57,11 +57,33 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                     // Process Digital Twin Update Event for the room model
                     if (message["data"]["modelId"].ToString() == "dtmi:com:example:Room;1")
                     {
+
+                        try
+                        {
+                            // Make sure digital twin node exist for this device
+                            var query = $"SELECT* FROM digitaltwins Device WHERE Device.$dtId = '{twinId}'";
+                            AsyncPageable<BasicDigitalTwin> asyncPageableResponse = _adtClient.QueryAsync<BasicDigitalTwin>(query);
+                            await foreach (BasicDigitalTwin twin in asyncPageableResponse)
+                            {
+                                if (twin.Id == twinId)
+                                {
+                                    log.LogInformation($"Query Twin {twin}");
+                                    break;
+                                }
+                            }
+                        }
+                        catch (Exception e)
+                        {
+                            log.LogError($"Error Creating DigitalTwinClient failed : {e.Message}");
+                            return;
+                        }
+
+
                         if (string.IsNullOrEmpty(message["data"]["unitId"].ToString()))
                         {
                             log.LogInformation("Need Unit ID");
 
-                            //var unitId = getUnitId();
+                            var unitId = getUnitId(_adtClient, twinId);
                         }
 
                         if (!string.IsNullOrEmpty(_mapKey) && !string.IsNullOrEmpty(_mapStatesetId) && !string.IsNullOrEmpty(unitId))
@@ -153,7 +175,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
             }
         }
 
-        private static async Task<string> getUnitId(string roomNumber, ILogger log)
+        private static async Task<string> getUnitId(DigitalTwinsClient adtClient, string roomNumber, ILogger log)
         {
             //https://github.com/Azure-Samples/LiveMaps/tree/main/src
 
