@@ -200,7 +200,6 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                     {
                         if (!twin.Contents.ContainsKey("Temperature"))
                         {
-                            log.LogInformation("****** Temperature Not Found");
                             bPatch = false;
                         }
 
