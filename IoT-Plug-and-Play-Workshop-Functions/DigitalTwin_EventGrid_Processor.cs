@@ -89,7 +89,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                             {
                                 log.LogInformation("Need Unit ID");
 
-                                unitId = await getUnitId(_adtClient, twinId);
+                                unitId = await getUnitId(_adtClient, twinId, log);
                             }
                         }
                         else
