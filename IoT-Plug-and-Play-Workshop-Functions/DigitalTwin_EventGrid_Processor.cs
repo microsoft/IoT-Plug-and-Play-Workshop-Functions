@@ -162,7 +162,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                                         }
                                         catch (RequestFailedException e)
                                         {
-                                            log.LogError("************test");
+                                            log.LogError($"************test {e.Status}");
                                         }
                                     }
                                 }
