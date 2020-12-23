@@ -197,6 +197,15 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                 {
                     if (twin.Id == deviceId)
                     {
+                        if (twin.Contents.ContainsKey("Temperature"))
+                        {
+                            log.LogInformation("****** Temperature Found");
+                        }
+                        else
+                        {
+                            log.LogInformation("****** Temperature NOT Found");
+                        }
+
                         bFoundTwin = true;
                         break;
                     }
