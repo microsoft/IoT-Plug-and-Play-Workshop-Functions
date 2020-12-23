@@ -107,7 +107,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                         else
                         {
                             unitId = unit.unitId;
-                            log.LogInformation($"Cached data unit id {unitId} length {unitId.Length}");
+                            log.LogInformation($"************** Cached data unit id {unitId} length {unitId.Length}");
                         }
 
                         if (!string.IsNullOrEmpty(_mapKey) && !string.IsNullOrEmpty(_mapStatesetId) && !string.IsNullOrEmpty(unitId))
@@ -208,9 +208,9 @@ namespace IoT_Plug_and_Play_Workshop_Functions
 
             using (var client = new HttpClient())
             {
+                log.LogInformation($"Sending Get to {url}");
                 HttpRequestMessage requestMessage = new HttpRequestMessage(HttpMethod.Get, url);
                 var response = await client.SendAsync(requestMessage);
-
 
                 if (response.StatusCode == HttpStatusCode.OK)
                 {
