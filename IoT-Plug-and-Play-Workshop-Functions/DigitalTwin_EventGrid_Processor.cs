@@ -92,7 +92,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
 
                                             // Update Room Twin so we don't have to query Azure Map.
 
-                                            await UpdateTwinPropertyAsync(_adtClient, twinId, "/UnitID", unitId, log);
+                                            await UpdateTwinPropertyAsync(_adtClient, twinId, "/UnitId", unitId, log);
                                         }
 
                                         break;
@@ -108,7 +108,6 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                         else
                         {
                             unitId = unit.unitId;
-                            log.LogInformation($"************** Cached data unit id {unitId} length {unitId.Length}");
                         }
 
                         if (!string.IsNullOrEmpty(_mapKey) && !string.IsNullOrEmpty(_mapStatesetId) && !string.IsNullOrEmpty(unitId))
@@ -175,9 +174,9 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                         return (ie.SourceId);
                 }
             }
-            catch (RequestFailedException exc)
+            catch (RequestFailedException e)
             {
-                log.LogInformation($"*** Error in retrieving parent:{exc.Status}:{exc.Message}");
+                log.LogInformation($"Error FindParentAsync() :{e.Status}:{e.Message}");
             }
             return null;
         }
@@ -193,9 +192,9 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                 log.LogInformation($"UpdateTwinPropertyAsync sending {updateTwinData}");
                 await client.UpdateDigitalTwinAsync(twinId, updateTwinData);
             }
-            catch (RequestFailedException exc)
+            catch (RequestFailedException e)
             {
-                log.LogInformation($"*** Error:{exc.Status}/{exc.Message}");
+                log.LogInformation($"Error UpdateTwinPropertyAsync() :{e.Status}/{e.Message}");
             }
         }
 
