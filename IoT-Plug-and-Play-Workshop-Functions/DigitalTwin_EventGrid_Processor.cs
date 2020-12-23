@@ -73,7 +73,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                                     log.LogInformation($"Query Twin Twin ID {twin.Id}");
                                     if (twin.Id == twinId)
                                     {
-                                        log.LogInformation($"Query Twin {twin}");
+                                        log.LogInformation($"Query Twin {twin.Contents}");
                                         break;
                                     }
                                 }
