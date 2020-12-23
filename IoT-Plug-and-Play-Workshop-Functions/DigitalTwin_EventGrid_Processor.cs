@@ -196,7 +196,9 @@ namespace IoT_Plug_and_Play_Workshop_Functions
             }
             catch (RequestFailedException e)
             {
-                log.LogInformation($"Error UpdateTwinPropertyAsync() :{e.Status}/{e.Message}/{e.ErrorCode}");
+                //if (e.Status == 400 && e.ErrorCode == )
+
+                log.LogError($"Error UpdateTwinPropertyAsync() :{e.Status}/{e.ErrorCode} : {e.Message}");
             }
         }
 
