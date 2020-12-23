@@ -12,6 +12,8 @@ using Newtonsoft.Json;
 using System.Threading.Tasks;
 using Azure;
 using Azure.Core.Pipeline;
+using System.Linq;
+using System.Net;
 
 namespace IoT_Plug_and_Play_Workshop_Functions
 {
@@ -21,7 +23,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
         private static string _adtServiceUrl = Environment.GetEnvironmentVariable("ADT_HOST_URL");
         private static string _mapKey = Environment.GetEnvironmentVariable("MAP_KEY");
         private static string _mapStatesetId = Environment.GetEnvironmentVariable("StatesetId");
-        private static string _mapTemperatureUnitId = Environment.GetEnvironmentVariable("UnitId");
+        private static string _mapDatasetId = Environment.GetEnvironmentVariable("DatasetId");
         private static DigitalTwinsClient _adtClient = null;
 
         [FunctionName("DigitalTwin_EventGrid_Processor")]
@@ -49,15 +51,22 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                 {
                     string twinId = eventGridEvent.Subject.ToString();
                     JObject message = (JObject)JsonConvert.DeserializeObject(eventGridEvent.Data.ToString());
-
+                    string unitId = string.Empty;
                     log.LogInformation($"Reading event from {twinId}: {eventGridEvent.EventType}: {message["data"]}");
 
                     // Process Digital Twin Update Event for the room model
                     if (message["data"]["modelId"].ToString() == "dtmi:com:example:Room;1")
                     {
-                        if (!string.IsNullOrEmpty(_mapKey) && !string.IsNullOrEmpty(_mapStatesetId) && !string.IsNullOrEmpty(_mapTemperatureUnitId))
+                        if (string.IsNullOrEmpty(message["data"]["unitId"].ToString()))
                         {
-                            string featureId = _mapTemperatureUnitId;
+                            log.LogInformation("Need Unit ID");
+
+                            //var unitId = getUnitId();
+                        }
+
+                        if (!string.IsNullOrEmpty(_mapKey) && !string.IsNullOrEmpty(_mapStatesetId) && !string.IsNullOrEmpty(unitId))
+                        {
+                            string featureId = unitId;
 
                             foreach (var operation in message["data"]["patch"])
                             {
@@ -142,6 +151,140 @@ namespace IoT_Plug_and_Play_Workshop_Functions
             {
                 log.LogInformation($"*** Error:{exc.Status}/{exc.Message}");
             }
+        }
+
+        private static async Task<string> getUnitId(string roomNumber, ILogger log)
+        {
+            //https://github.com/Azure-Samples/LiveMaps/tree/main/src
+
+            string unitId = string.Empty;
+
+            string url = $"https://us.atlas.microsoft.com/wfs/datasets/{_mapDatasetId}/collections/unit/items?api-version=1.0&limit=1&subscription-key={_mapKey}&name={roomNumber}";
+
+            using (var client = new HttpClient())
+            {
+                HttpRequestMessage requestMessage = new HttpRequestMessage(HttpMethod.Get, url);
+                var response = await client.SendAsync(requestMessage);
+
+
+                if (response.StatusCode == HttpStatusCode.OK)
+                {
+                    var result = await response.Content.ReadAsStringAsync();
+                    var features = JsonConvert.DeserializeObject<FeatureCollection>(result);
+
+                    if (features.NumberReturned == 1)
+                    {
+                        log.LogInformation($"Found a feature {features.Features[0].Id} name {features.Features[0].Properties.Name}");
+                        unitId = features.Features[0].Id;
+                    }
+                }
+            }
+
+            return unitId;
+
+            //    HttpRequestMessage requestMessage = new HttpRequestMessage(HttpMethod.Get, url);
+            //var response = await client.SendAsync(requestMessage);
+
+            //for (int i = 0; ; i++)
+            //{
+            //    using (var client = new HttpClient())
+            //    {
+            //        HttpRequestMessage requestMessage = new HttpRequestMessage(HttpMethod.Get, url);
+            //        var response = await client.SendAsync(requestMessage);
+
+            //        if (response.StatusCode != HttpStatusCode.OK)
+            //            break;
+
+            //        var result = await response.Content.ReadAsStringAsync();
+
+            //        var featureCollection = JsonConvert.DeserializeObject<FeatureCollection>(result);
+            //        features.AddRange(featureCollection.Features);
+
+            //        if (featureCollection.NumberReturned < limit)
+            //            break;
+            //        var nextLink = featureCollection.links.FirstOrDefault(f => f.rel == "next");
+            //        if (nextLink == null)
+            //            break;
+            //        else
+            //            url = nextLink.href.Replace("https://atlas", "https://us.atlas") + $"&subscription-key={atlasSubscriptionKey}";
+            //    }
+            //}
+
+        }
+
+        public class FeatureCollection
+        {
+            [JsonProperty("type")]
+            public string Type { get; set; }
+
+            [JsonProperty("features")]
+            public Feature[] Features { get; set; }
+
+            [JsonProperty("numberReturned")]
+            public long NumberReturned { get; set; }
+
+            public link[] links { get; set; }
+        }
+
+        public class link
+        {
+            public string href { get; set; }
+            public string rel { get; set; }
+        }
+
+        public partial class Properties
+        {
+            [JsonProperty("originalId")]
+            public Guid OriginalId { get; set; }
+
+            [JsonProperty("categoryId")]
+            public string CategoryId { get; set; }
+
+            [JsonProperty("isOpenArea")]
+            public bool IsOpenArea { get; set; }
+
+            [JsonProperty("isRoutable")]
+            public string[] isRoutable { get; set; }
+
+            [JsonProperty("routeThroughBehavior")]
+            public string RouteThroughBehavior { get; set; }
+
+            [JsonProperty("levelId")]
+            public string LevelId { get; set; }
+
+            [JsonProperty("occupants")]
+            public object[] Occupants { get; set; }
+
+            [JsonProperty("addressId")]
+            public string AddressId { get; set; }
+
+            [JsonProperty("name")]
+            public string Name { get; set; }
+        }
+        public partial class Geometry
+        {
+            [JsonProperty("type")]
+            public string Type { get; set; }
+
+            [JsonProperty("coordinates")]
+            public double[][][] Coordinates { get; set; }
+        }
+        public partial class Feature
+        {
+            [JsonProperty("type")]
+            public string Type { get; set; }
+
+            [JsonProperty("geometry")]
+            public Geometry Geometry { get; set; }
+
+            [JsonProperty("properties")]
+            public Properties Properties { get; set; }
+
+            [JsonProperty("id")]
+            public string Id { get; set; }
+
+            [JsonProperty("featureType")]
+            public string featureType { get; set; }
         }
     }
 }
