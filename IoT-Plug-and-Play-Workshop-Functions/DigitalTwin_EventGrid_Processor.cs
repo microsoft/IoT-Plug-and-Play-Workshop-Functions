@@ -70,11 +70,20 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                                 AsyncPageable<BasicDigitalTwin> asyncPageableResponse = _adtClient.QueryAsync<BasicDigitalTwin>(query);
                                 await foreach (BasicDigitalTwin twin in asyncPageableResponse)
                                 {
-                                    log.LogInformation($"Query Twin Twin ID {twin.Id}");
+                                    log.LogInformation($"Query Digital Twin ID {twin.Id}");
                                     if (twin.Id == twinId)
                                     {
                                         log.LogInformation($"Query Twin Unit ID {twin.Contents["UnitId"]}");
-                                        break;
+                                        unitId = twin.Contents["UnitId"].ToString();
+
+                                        if (!string.IsNullOrEmpty(unitId))
+                                        {
+                                            unit = new MapUnit();
+                                            unit.twinId = twinId;
+                                            unit.unitId = unitId;
+                                            UnitList.Add(unit);
+                                        }
+                                    break;
                                     }
                                 }
                             }
@@ -94,6 +103,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                         }
                         else
                         {
+                            unitId = unit.unitId;
                             log.LogInformation($"Cached data unit id {unitId}");
                         }
 
