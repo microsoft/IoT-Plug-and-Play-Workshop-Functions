@@ -129,11 +129,11 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                     }
                     else
                     {
-                        //Find and update parent Twin
+                        // Find and update parent Twin
                         string parentId = await FindParentAsync(_adtClient, twinId, "contains", log);
                         if (parentId != null)
                         {
-                            log.LogInformation($"Parent ID {parentId}");
+                            log.LogInformation($"Found Parent : Twin Id {parentId}");
                             // Read properties which values have been changed in each operation
                             foreach (var operation in message["data"]["patch"])
                             {
