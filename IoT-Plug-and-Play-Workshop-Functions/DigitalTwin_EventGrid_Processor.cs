@@ -62,7 +62,6 @@ namespace IoT_Plug_and_Play_Workshop_Functions
 
                         if (unit == null)
                         {
-                            log.LogInformation("Unit Not Found");
                             try
                             {
                                 // Query digital twin
@@ -70,10 +69,8 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                                 AsyncPageable<BasicDigitalTwin> asyncPageableResponse = _adtClient.QueryAsync<BasicDigitalTwin>(query);
                                 await foreach (BasicDigitalTwin twin in asyncPageableResponse)
                                 {
-                                    log.LogInformation($"Query Digital Twin ID {twin.Id}");
                                     if (twin.Id == twinId)
                                     {
-                                        log.LogInformation($"Query Twin Unit ID {twin.Contents["UnitId"]}");
                                         unitId = twin.Contents["UnitId"].ToString();
 
                                         if (string.IsNullOrEmpty(unitId))
