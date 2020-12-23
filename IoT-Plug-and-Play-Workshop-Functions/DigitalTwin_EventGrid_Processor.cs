@@ -178,7 +178,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
             }
             catch (RequestFailedException e)
             {
-                log.LogInformation($"Error FindParentAsync() :{e.Status}:{e.Message}");
+                log.LogError($"Error FindParentAsync() :{e.Status}:{e.Message}");
             }
             return null;
         }
@@ -196,9 +196,16 @@ namespace IoT_Plug_and_Play_Workshop_Functions
             }
             catch (RequestFailedException e)
             {
-                //if (e.Status == 400 && e.ErrorCode == )
+                if (e.Status == 400)
+                {
+                    var updateTwinData = new JsonPatchDocument();
+                    updateTwinData.AppendAdd(propertyPath, value);
 
-                log.LogError($"Error UpdateTwinPropertyAsync() :{e.Status}/{e.ErrorCode} : {e.Message}");
+                    log.LogInformation($"*************** UpdateTwinPropertyAsync Appnd Add sending {updateTwinData}");
+                    await client.UpdateDigitalTwinAsync(twinId, updateTwinData);
+                }
+
+                log.LogError($"Error UpdateTwinPropertyAsync():{e.Status}/{e.ErrorCode} : {e.Message}");
             }
         }
 
@@ -231,40 +238,11 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                 }
                 else
                 {
-                    log.LogInformation($"Query feature failed {response.StatusCode}");
+                    log.LogError($"Query feature failed {response.StatusCode}");
                 }
             }
 
             return unitId;
-
-            //    HttpRequestMessage requestMessage = new HttpRequestMessage(HttpMethod.Get, url);
-            //var response = await client.SendAsync(requestMessage);
-
-            //for (int i = 0; ; i++)
-            //{
-            //    using (var client = new HttpClient())
-            //    {
-            //        HttpRequestMessage requestMessage = new HttpRequestMessage(HttpMethod.Get, url);
-            //        var response = await client.SendAsync(requestMessage);
-
-            //        if (response.StatusCode != HttpStatusCode.OK)
-            //            break;
-
-            //        var result = await response.Content.ReadAsStringAsync();
-
-            //        var featureCollection = JsonConvert.DeserializeObject<FeatureCollection>(result);
-            //        features.AddRange(featureCollection.Features);
-
-            //        if (featureCollection.NumberReturned < limit)
-            //            break;
-            //        var nextLink = featureCollection.links.FirstOrDefault(f => f.rel == "next");
-            //        if (nextLink == null)
-            //            break;
-            //        else
-            //            url = nextLink.href.Replace("https://atlas", "https://us.atlas") + $"&subscription-key={atlasSubscriptionKey}";
-            //    }
-            //}
-
         }
 
         public class MapUnit
