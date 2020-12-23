@@ -91,7 +91,6 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                                             UnitList.Add(unit);
                                         }
 
-
                                         break;
                                     }
                                 }
@@ -121,7 +120,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                                              new JProperty("value", operation["value"].ToString()),
                                              new JProperty("eventTimestamp", DateTime.Now.ToString("s"))))));
 
-                                    log.LogInformation($"********* Updating {featureId} to {operation["value"].ToString()}");
+                                    log.LogInformation($"Updating {featureId} to {operation["value"].ToString()}");
 
                                     var response = await _httpClient.PostAsync(
                                         $"https://atlas.microsoft.com/featureState/state?api-version=1.0&statesetID={_mapStatesetId}&featureID={featureId}&subscription-key={_mapKey}",
@@ -296,7 +295,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
             public bool IsOpenArea { get; set; }
 
             [JsonProperty("isRoutable")]
-            public string[] isRoutable { get; set; }
+            public bool isRoutable { get; set; }
 
             [JsonProperty("routeThroughBehavior")]
             public string RouteThroughBehavior { get; set; }
