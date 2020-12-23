@@ -196,6 +196,8 @@ namespace IoT_Plug_and_Play_Workshop_Functions
             }
             catch (RequestFailedException e)
             {
+                log.LogError($"Error UpdateTwinPropertyAsync():{e.Status}/{e.ErrorCode} : {e.Message}");
+
                 if (e.Status == 400)
                 {
                     var updateTwinData = new JsonPatchDocument();
@@ -205,7 +207,6 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                     await client.UpdateDigitalTwinAsync(twinId, updateTwinData);
                 }
 
-                log.LogError($"Error UpdateTwinPropertyAsync():{e.Status}/{e.ErrorCode} : {e.Message}");
             }
         }
 
