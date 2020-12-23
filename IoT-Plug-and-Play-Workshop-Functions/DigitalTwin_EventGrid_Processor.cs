@@ -218,6 +218,10 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                         unitId = features.Features[0].Id;
                     }
                 }
+                else
+                {
+                    log.LogInformation($"Query feature failed {response.StatusCode}");
+                }
             }
 
             return unitId;
