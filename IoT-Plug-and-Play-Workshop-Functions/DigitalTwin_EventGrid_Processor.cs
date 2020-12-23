@@ -73,14 +73,14 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                                     log.LogInformation($"Query Twin Twin ID {twin.Id}");
                                     if (twin.Id == twinId)
                                     {
-                                        log.LogInformation($"Query Twin {twin.Contents}");
+                                        log.LogInformation($"Query Twin Unit ID {twin.Contents["UnitId"]}");
                                         break;
                                     }
                                 }
                             }
                             catch (Exception e)
                             {
-                                log.LogError($"Error Searching DigitalTwinClient failed : {e.Message}");
+                                log.LogError($"Error Searching Digital Twin {twinId} failed : {e.Message}");
                                 return;
                             }
 
