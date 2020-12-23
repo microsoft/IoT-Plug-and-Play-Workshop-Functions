@@ -100,6 +100,10 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                                     }
                                 }
                             }
+                            catch (RequestFailedException e)
+                            {
+                                log.LogError($"Request Failed : Query Digital Twin {twinId} failed() :{e.Status}:{e.Message}");
+                            }
                             catch (Exception e)
                             {
                                 log.LogError($"Error Searching Digital Twin {twinId} failed : {e.Message}");
@@ -183,6 +187,23 @@ namespace IoT_Plug_and_Play_Workshop_Functions
             return null;
         }
 
+        public static async Task AddTwinPropertyAsync(DigitalTwinsClient client, string twinId, string propertyPath, object value, ILogger log)
+        {
+            // If the twin does not exist, this will log an error
+            try
+            {
+                var updateTwinData = new JsonPatchDocument();
+                updateTwinData.AppendAdd(propertyPath, value);
+
+                log.LogInformation($"UpdateTwinPropertyAsync Patch Add sending {updateTwinData}");
+                await client.UpdateDigitalTwinAsync(twinId, updateTwinData);
+            }
+            catch (RequestFailedException e)
+            {
+                log.LogError($"Error AddTwinPropertyAsync():{e.Status}/{e.ErrorCode} : {e.Message}");
+            }
+        }
+
         public static async Task UpdateTwinPropertyAsync(DigitalTwinsClient client, string twinId, string propertyPath, object value, ILogger log)
         {
             // If the twin does not exist, this will log an error
@@ -196,17 +217,14 @@ namespace IoT_Plug_and_Play_Workshop_Functions
             }
             catch (RequestFailedException e)
             {
-                log.LogError($"Error UpdateTwinPropertyAsync():{e.Status}/{e.ErrorCode} : {e.Message}");
-
                 if (e.Status == 400)
                 {
-                    var updateTwinData = new JsonPatchDocument();
-                    updateTwinData.AppendAdd(propertyPath, value);
-
-                    log.LogInformation($"*************** UpdateTwinPropertyAsync Appnd Add sending {updateTwinData}");
-                    await client.UpdateDigitalTwinAsync(twinId, updateTwinData);
+                    await AddTwinPropertyAsync(client, twinId, propertyPath, value, log);
                 }
-
+                else
+                {
+                    log.LogError($"Error UpdateTwinPropertyAsync():{e.Status}/{e.ErrorCode} : {e.Message}");
+                }
             }
         }
 
