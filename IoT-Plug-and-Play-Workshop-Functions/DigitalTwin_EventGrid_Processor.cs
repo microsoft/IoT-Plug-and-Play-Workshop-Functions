@@ -52,7 +52,8 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                     string twinId = eventGridEvent.Subject.ToString();
                     JObject message = (JObject)JsonConvert.DeserializeObject(eventGridEvent.Data.ToString());
                     string unitId = string.Empty;
-                    log.LogInformation($"Reading event from {twinId}: {eventGridEvent.EventType}: {message["data"]}");
+
+                    log.LogInformation($"Received Digital Twin Event from {twinId} : {eventGridEvent.EventType} : {message["data"]}");
 
                     // Process Digital Twin Update Event for the room model
                     if (message["data"]["modelId"].ToString() == "dtmi:com:example:Room;1")
@@ -123,7 +124,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                                              new JProperty("value", operation["value"].ToString()),
                                              new JProperty("eventTimestamp", DateTime.Now.ToString("s"))))));
 
-                                    log.LogInformation($"Updating {featureId} to {operation["value"].ToString()}");
+                                    log.LogInformation($"Updating Map Unit {featureId} Temperature to {operation["value"].ToString()}");
 
                                     var response = await _httpClient.PostAsync(
                                         $"https://atlas.microsoft.com/featureState/state?api-version=1.0&statesetID={_mapStatesetId}&featureID={featureId}&subscription-key={_mapKey}",
@@ -138,9 +139,10 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                     {
                         // Find and update parent Twin
                         string parentId = await FindParentAsync(_adtClient, twinId, "contains", log);
+
                         if (parentId != null)
                         {
-                            log.LogInformation($"Found Parent : Twin Id {parentId}");
+                            // log.LogInformation($"Found Parent : Twin Id {parentId}");
                             // Read properties which values have been changed in each operation
                             foreach (var operation in message["data"]["patch"])
                             {
