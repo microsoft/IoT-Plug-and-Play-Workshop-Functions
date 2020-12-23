@@ -83,11 +83,16 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                                             log.LogInformation($"Got Unit ID from Azure Map {unitId}");
                                         }
 
-                                        // Cache unit ID
-                                        unit = new MapUnit();
-                                        unit.twinId = twinId;
-                                        unit.unitId = unitId;
-                                        UnitList.Add(unit);
+                                        if (!string.IsNullOrEmpty(unitId))
+                                        {
+                                            log.LogInformation("Caching Unit ID data");
+                                            // Cache unit ID
+                                            unit = new MapUnit();
+                                            unit.twinId = twinId;
+                                            unit.unitId = unitId;
+                                            UnitList.Add(unit);
+                                        }
+
 
                                         break;
                                     }
