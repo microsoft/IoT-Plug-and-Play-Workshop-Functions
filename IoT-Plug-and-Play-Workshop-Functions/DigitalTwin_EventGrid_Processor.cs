@@ -77,7 +77,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                                         if (string.IsNullOrEmpty(unitId))
                                         {
                                             log.LogInformation($"Getting Unit ID from Azure Map");
-                                            unitId = await getUnitId(_adtClient, twin.Contents["RoomNumber"].ToString(), log);
+                                            unitId = await getUnitId(twin.Contents["RoomNumber"].ToString(), log);
                                             log.LogInformation($"Got Unit ID from Azure Map {unitId}");
                                         }
 
@@ -89,6 +89,10 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                                             unit.twinId = twinId;
                                             unit.unitId = unitId;
                                             UnitList.Add(unit);
+
+                                            // Update Room Twin so we don't have to query Azure Map.
+
+                                            await UpdateTwinPropertyAsync(_adtClient, twinId, "/UnitID", unitId, log);
                                         }
 
                                         break;
@@ -195,7 +199,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
             }
         }
 
-        private static async Task<string> getUnitId(DigitalTwinsClient adtClient, string roomNumber, ILogger log)
+        private static async Task<string> getUnitId(string roomNumber, ILogger log)
         {
             //https://github.com/Azure-Samples/LiveMaps/tree/main/src
 
@@ -212,6 +216,8 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                 if (response.StatusCode == HttpStatusCode.OK)
                 {
                     var result = await response.Content.ReadAsStringAsync();
+
+                    log.LogInformation($"Response {result}");
                     var features = JsonConvert.DeserializeObject<FeatureCollection>(result);
 
                     if (features.NumberReturned == 1)
