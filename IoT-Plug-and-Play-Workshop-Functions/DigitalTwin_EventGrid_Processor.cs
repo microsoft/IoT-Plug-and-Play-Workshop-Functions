@@ -57,7 +57,6 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                     // Process Digital Twin Update Event for the room model
                     if (message["data"]["modelId"].ToString() == "dtmi:com:example:Room;1")
                     {
-
                         MapUnit unit = UnitList.Find(x => x.twinId == twinId);
 
                         log.LogInformation($"Search Unit {unit}");
@@ -66,6 +65,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                         {
                             try
                             {
+                                log.LogInformation($"");
                                 // Make sure digital twin node exist for this device
                                 var query = $"SELECT* FROM digitaltwins Device WHERE Device.$dtId = '{twinId}'";
                                 AsyncPageable<BasicDigitalTwin> asyncPageableResponse = _adtClient.QueryAsync<BasicDigitalTwin>(query);
@@ -80,7 +80,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                             }
                             catch (Exception e)
                             {
-                                log.LogError($"Error Creating DigitalTwinClient failed : {e.Message}");
+                                log.LogError($"Error Searching DigitalTwinClient failed : {e.Message}");
                                 return;
                             }
 
