@@ -12,8 +12,8 @@ using Newtonsoft.Json;
 using System.Threading.Tasks;
 using Azure;
 using Azure.Core.Pipeline;
-using System.Linq;
 using System.Net;
+using System.Collections.Generic;
 
 namespace IoT_Plug_and_Play_Workshop_Functions
 {
@@ -25,6 +25,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
         private static string _mapStatesetId = Environment.GetEnvironmentVariable("StatesetId");
         private static string _mapDatasetId = Environment.GetEnvironmentVariable("DatasetId");
         private static DigitalTwinsClient _adtClient = null;
+        private static List<MapUnit> UnitList = new List<MapUnit>();
 
         [FunctionName("DigitalTwin_EventGrid_Processor")]
         public static async Task Run([EventGridTrigger] EventGridEvent eventGridEvent, ILogger log)
@@ -58,32 +59,43 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                     if (message["data"]["modelId"].ToString() == "dtmi:com:example:Room;1")
                     {
 
-                        try
+                        MapUnit unit = UnitList.Find(x => x.twinId == twinId);
+
+                        log.LogInformation($"Search Unit {unit}");
+
+                        if (unit == null)
                         {
-                            // Make sure digital twin node exist for this device
-                            var query = $"SELECT* FROM digitaltwins Device WHERE Device.$dtId = '{twinId}'";
-                            AsyncPageable<BasicDigitalTwin> asyncPageableResponse = _adtClient.QueryAsync<BasicDigitalTwin>(query);
-                            await foreach (BasicDigitalTwin twin in asyncPageableResponse)
+                            try
                             {
-                                if (twin.Id == twinId)
+                                // Make sure digital twin node exist for this device
+                                var query = $"SELECT* FROM digitaltwins Device WHERE Device.$dtId = '{twinId}'";
+                                AsyncPageable<BasicDigitalTwin> asyncPageableResponse = _adtClient.QueryAsync<BasicDigitalTwin>(query);
+                                await foreach (BasicDigitalTwin twin in asyncPageableResponse)
                                 {
-                                    log.LogInformation($"Query Twin {twin}");
-                                    break;
+                                    if (twin.Id == twinId)
+                                    {
+                                        log.LogInformation($"Query Twin {twin}");
+                                        break;
+                                    }
                                 }
                             }
+                            catch (Exception e)
+                            {
+                                log.LogError($"Error Creating DigitalTwinClient failed : {e.Message}");
+                                return;
+                            }
+
+
+                            if (string.IsNullOrEmpty(message["data"]["unitId"].ToString()))
+                            {
+                                log.LogInformation("Need Unit ID");
+
+                                var unitId = getUnitId(_adtClient, twinId);
+                            }
                         }
-                        catch (Exception e)
+                        else
                         {
-                            log.LogError($"Error Creating DigitalTwinClient failed : {e.Message}");
-                            return;
-                        }
-
-
-                        if (string.IsNullOrEmpty(message["data"]["unitId"].ToString()))
-                        {
-                            log.LogInformation("Need Unit ID");
-
-                            var unitId = getUnitId(_adtClient, twinId);
+                            log.LogInformation($"Cached data unit id {unitId}");
                         }
 
                         if (!string.IsNullOrEmpty(_mapKey) && !string.IsNullOrEmpty(_mapStatesetId) && !string.IsNullOrEmpty(unitId))
@@ -136,7 +148,6 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                 }
             }
         }
-
 
         private static async Task<string> FindParentAsync(DigitalTwinsClient client, string child, string relname, ILogger log)
         {
@@ -234,6 +245,11 @@ namespace IoT_Plug_and_Play_Workshop_Functions
 
         }
 
+        public class MapUnit
+        {
+            public string twinId {get;set;}
+            public string unitId {get;set;}
+        }
         public class FeatureCollection
         {
             [JsonProperty("type")]
