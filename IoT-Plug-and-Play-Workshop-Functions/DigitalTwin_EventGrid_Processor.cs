@@ -70,10 +70,18 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                                 AsyncPageable<BasicDigitalTwin> asyncPageableResponse = _adtClient.QueryAsync<BasicDigitalTwin>(query);
                                 await foreach (BasicDigitalTwin twin in asyncPageableResponse)
                                 {
+                                    bool bPatch = true;
                                     log.LogInformation($"Found Twin {twin.Id} : Room Number {twin.Contents["RoomNumber"]}");
                                     if (twin.Id == twinId)
                                     {
-                                        unitId = twin.Contents["UnitId"].ToString();
+                                        if (twin.Contents.ContainsKey("UnitId"))
+                                        {
+                                            unitId = twin.Contents["UnitId"].ToString();
+                                        }
+                                        else
+                                        {
+                                            bPatch = false;
+                                        }
 
                                         if (string.IsNullOrEmpty(unitId))
                                         {
@@ -92,7 +100,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                                             UnitList.Add(unit);
 
                                             // Update Room Twin so we don't have to query Azure Map.
-                                            await UpdateTwinPropertyAsync(_adtClient, twinId, "/UnitId", unitId, twin.Contents.ContainsKey("UnitId"), log);
+                                            await UpdateTwinPropertyAsync(_adtClient, twinId, "/UnitId", unitId, bPatch, log);
                                         }
 
                                         break;
