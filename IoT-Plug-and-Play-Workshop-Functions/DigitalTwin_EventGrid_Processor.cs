@@ -172,6 +172,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                             foreach (var operation in message["data"]["patch"])
                             {
                                 string opValue = (string)operation["op"];
+                                log.LogInformation($"");
                                 if (opValue.Equals("replace"))
                                 {
                                     string propertyPath = ((string)operation["path"]);
