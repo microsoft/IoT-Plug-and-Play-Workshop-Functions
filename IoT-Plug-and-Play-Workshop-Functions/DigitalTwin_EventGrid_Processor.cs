@@ -87,6 +87,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                                                 log.LogInformation($"Getting Unit ID from Azure Map for {twin.Contents["RoomNumber"].ToString()}");
                                                 unitId = await getUnitId(twin.Contents["RoomNumber"].ToString(), log);
                                                 log.LogInformation($"Got Unit ID from Azure Map {unitId}");
+                                                bPatch = false;
                                             }
                                         }
 
