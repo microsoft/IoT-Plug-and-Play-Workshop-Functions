@@ -87,21 +87,23 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                                                 log.LogInformation($"Getting Unit ID from Azure Map for {twin.Contents["RoomNumber"].ToString()}");
                                                 unitId = await getUnitId(twin.Contents["RoomNumber"].ToString(), log);
                                                 log.LogInformation($"Got Unit ID from Azure Map {unitId}");
-                                                bPatch = false;
+                                                if (!string.IsNullOrEmpty(unitId))
+                                                {
+                                                    log.LogInformation("Caching Unit ID data");
+                                                    // Cache unit ID
+                                                    unit = new MapUnit();
+                                                    unit.twinId = twinId;
+                                                    unit.unitId = unitId;
+                                                    UnitList.Add(unit);
+
+                                                    // Update Room Twin so we don't have to query Azure Map.
+                                                    await UpdateTwinPropertyAsync(_adtClient, twinId, "/UnitId", unitId, false, log);
+                                                }
                                             }
-                                        }
-
-                                        if (!string.IsNullOrEmpty(unitId))
-                                        {
-                                            log.LogInformation("Caching Unit ID data");
-                                            // Cache unit ID
-                                            unit = new MapUnit();
-                                            unit.twinId = twinId;
-                                            unit.unitId = unitId;
-                                            UnitList.Add(unit);
-
-                                            // Update Room Twin so we don't have to query Azure Map.
-                                            await UpdateTwinPropertyAsync(_adtClient, twinId, "/UnitId", unitId, bPatch, log);
+                                            else
+                                            {
+                                                log.LogInformation($"Empty Room Number Data : {message["data"]}");
+                                            }
                                         }
 
                                         break;
