@@ -123,6 +123,8 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                         {
                             string featureId = unitId;
 
+                            log.LogInformation($"Message Data : {message["data"]}");
+
                             foreach (var operation in message["data"]["patch"])
                             {
                                 if (operation["op"].ToString() == "replace" && operation["path"].ToString() == "/Temperature")
@@ -141,6 +143,10 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                                     log.LogInformation(await response.Content.ReadAsStringAsync());
                                 }
                             }
+                        }
+                        else
+                        {
+                            log.LogInformation($"Map Key {_mapKey} / StateSet ID {_mapStatesetId} / Unit ID {unitId}");
                         }
                     }
                     else
