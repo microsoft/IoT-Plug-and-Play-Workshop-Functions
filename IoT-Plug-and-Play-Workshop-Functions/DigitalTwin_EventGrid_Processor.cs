@@ -85,9 +85,16 @@ namespace IoT_Plug_and_Play_Workshop_Functions
 
                                         if (string.IsNullOrEmpty(unitId))
                                         {
-                                            log.LogInformation($"Getting Unit ID from Azure Map");
-                                            unitId = await getUnitId(twin.Contents["RoomNumber"].ToString(), log);
-                                            log.LogInformation($"Got Unit ID from Azure Map {unitId}");
+                                            if (!twin.Contents.ContainsKey("RoomNumber"))
+                                            {
+                                                bPatch = false;
+                                            }
+                                            else
+                                            {
+                                                log.LogInformation($"Getting Unit ID from Azure Map");
+                                                unitId = await getUnitId(twin.Contents["RoomNumber"].ToString(), log);
+                                                log.LogInformation($"Got Unit ID from Azure Map {unitId}");
+                                            }
                                         }
 
                                         if (!string.IsNullOrEmpty(unitId))
@@ -106,10 +113,6 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                                         break;
                                     }
                                 }
-                            }
-                            catch (RequestFailedException e)
-                            {
-                                log.LogError($"Request Failed : Query Digital Twin {twinId} failed() :{e.Status}:{e.Message}");
                             }
                             catch (Exception e)
                             {
