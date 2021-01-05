@@ -142,21 +142,27 @@ namespace IoT_Plug_and_Play_Workshop_Functions
 
                             foreach (var operation in message["data"]["patch"])
                             {
-                                string opValue = operation["op"].ToString();
-                                if ((opValue.Equals("replace") || opValue.Equals("add")) && operation["path"].ToString() == "/Temperature")
-                                {   //Update the maps feature stateset
-                                    var postcontent = new JObject(new JProperty("States", new JArray(
-                                        new JObject(new JProperty("keyName", "temperature"),
-                                             new JProperty("value", operation["value"].ToString()),
-                                             new JProperty("eventTimestamp", DateTime.Now.ToString("s"))))));
 
-                                    log.LogInformation($"Updating Map Unit {featureId} Temperature to {operation["value"].ToString()}");
+                                if (operation["path"].ToString() == "/Temperature")
+                                {
+                                    string opValue = operation["op"].ToString();
+                                    log.LogInformation($"Found Temperature {operation["op"].ToString()}");
 
-                                    var response = await _httpClient.PostAsync(
-                                        $"https://atlas.microsoft.com/featureState/state?api-version=1.0&statesetID={_mapStatesetId}&featureID={featureId}&subscription-key={_mapKey}",
-                                        new StringContent(postcontent.ToString()));
+                                    if (opValue.Equals("replace") || opValue.Equals("add"))
+                                    {   //Update the maps feature stateset
+                                        var postcontent = new JObject(new JProperty("States", new JArray(
+                                            new JObject(new JProperty("keyName", "temperature"),
+                                                 new JProperty("value", operation["value"].ToString()),
+                                                 new JProperty("eventTimestamp", DateTime.Now.ToString("s"))))));
 
-                                    log.LogInformation(await response.Content.ReadAsStringAsync());
+                                        log.LogInformation($"Updating Map Unit {featureId} Temperature to {operation["value"].ToString()}");
+
+                                        var response = await _httpClient.PostAsync(
+                                            $"https://atlas.microsoft.com/featureState/state?api-version=1.0&statesetID={_mapStatesetId}&featureID={featureId}&subscription-key={_mapKey}",
+                                            new StringContent(postcontent.ToString()));
+
+                                        log.LogInformation(await response.Content.ReadAsStringAsync());
+                                    }
                                 }
                             }
                         }
