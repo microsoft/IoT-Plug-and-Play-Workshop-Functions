@@ -71,7 +71,9 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                                 await foreach (BasicDigitalTwin twin in asyncPageableResponse)
                                 {
                                     bool bPatch = true;
-                                    log.LogInformation($"Found Twin {twin.Id} : Room Number {twin.Contents["RoomNumber"]}");
+
+                                    log.LogInformation($"Found Twin {twin.Id}");
+
                                     if (twin.Id == twinId)
                                     {
                                         if (twin.Contents.ContainsKey("UnitId"))
@@ -80,18 +82,9 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                                         }
                                         else
                                         {
-                                            bPatch = false;
-                                        }
-
-                                        if (string.IsNullOrEmpty(unitId))
-                                        {
-                                            if (!twin.Contents.ContainsKey("RoomNumber"))
+                                            if (twin.Contents.ContainsKey("RoomNumber"))
                                             {
-                                                bPatch = false;
-                                            }
-                                            else
-                                            {
-                                                log.LogInformation($"Getting Unit ID from Azure Map");
+                                                log.LogInformation($"Getting Unit ID from Azure Map for {twin.Contents["RoomNumber"].ToString()}");
                                                 unitId = await getUnitId(twin.Contents["RoomNumber"].ToString(), log);
                                                 log.LogInformation($"Got Unit ID from Azure Map {unitId}");
                                             }
