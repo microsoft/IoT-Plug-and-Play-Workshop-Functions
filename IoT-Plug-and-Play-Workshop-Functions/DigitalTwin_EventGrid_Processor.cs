@@ -142,7 +142,8 @@ namespace IoT_Plug_and_Play_Workshop_Functions
 
                             foreach (var operation in message["data"]["patch"])
                             {
-                                if (operation["op"].ToString() == "replace" && operation["path"].ToString() == "/Temperature")
+                                string opValue = operation["op"].ToString();
+                                if ((opValue.Equals("replace") || opValue.Equals("add")) && operation["path"].ToString() == "/Temperature")
                                 {   //Update the maps feature stateset
                                     var postcontent = new JObject(new JProperty("States", new JArray(
                                         new JObject(new JProperty("keyName", "temperature"),
@@ -172,7 +173,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                             foreach (var operation in message["data"]["patch"])
                             {
                                 string opValue = (string)operation["op"];
-                                log.LogInformation($"");
+
                                 if (opValue.Equals("replace"))
                                 {
                                     string propertyPath = ((string)operation["path"]);
@@ -185,7 +186,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                                         }
                                         catch (RequestFailedException e)
                                         {
-                                            log.LogError($"************test {e.Status}");
+                                            log.LogError($"Error while updating Twin Property :  {e.Status}");
                                         }
                                     }
                                 }
