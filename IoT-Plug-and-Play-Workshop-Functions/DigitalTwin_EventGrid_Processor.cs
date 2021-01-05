@@ -70,8 +70,6 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                                 AsyncPageable<BasicDigitalTwin> asyncPageableResponse = _adtClient.QueryAsync<BasicDigitalTwin>(query);
                                 await foreach (BasicDigitalTwin twin in asyncPageableResponse)
                                 {
-                                    bool bPatch = true;
-
                                     log.LogInformation($"Found Twin {twin.Id}");
 
                                     if (twin.Id == twinId)
@@ -82,10 +80,28 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                                         }
                                         else
                                         {
+                                            string roomNumber = string.Empty;
+
                                             if (twin.Contents.ContainsKey("RoomNumber"))
                                             {
-                                                log.LogInformation($"Getting Unit ID from Azure Map for {twin.Contents["RoomNumber"].ToString()}");
-                                                unitId = await getUnitId(twin.Contents["RoomNumber"].ToString(), log);
+                                                roomNumber = twin.Contents["RoomNumber"].ToString();
+                                            }
+                                            else
+                                            {
+                                                foreach (var operation in message["data"]["patch"])
+                                                {
+                                                    if (operation["op"].ToString() == "add" && operation["path"].ToString() == "/RoomNumber")
+                                                    {
+                                                        roomNumber = operation["value"].ToString();
+                                                        break;
+                                                    }
+                                                }
+                                            }
+
+                                            if (!string.IsNullOrEmpty(roomNumber))
+                                            {
+                                                log.LogInformation($"Getting Unit ID from Azure Map for {roomNumber}");
+                                                unitId = await getUnitId(roomNumber, log);
                                                 log.LogInformation($"Got Unit ID from Azure Map {unitId}");
                                                 if (!string.IsNullOrEmpty(unitId))
                                                 {
@@ -99,10 +115,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                                                     // Update Room Twin so we don't have to query Azure Map.
                                                     await UpdateTwinPropertyAsync(_adtClient, twinId, "/UnitId", unitId, false, log);
                                                 }
-                                            }
-                                            else
-                                            {
-                                                log.LogInformation($"Empty Room Number Data : {message["data"]}");
+
                                             }
                                         }
 
@@ -145,10 +158,6 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                                     log.LogInformation(await response.Content.ReadAsStringAsync());
                                 }
                             }
-                        }
-                        else
-                        {
-                            log.LogInformation($"Map Key {_mapKey} / StateSet ID {_mapStatesetId} / Unit ID {unitId}");
                         }
                     }
                     else
