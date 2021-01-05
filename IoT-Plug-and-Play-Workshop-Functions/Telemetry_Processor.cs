@@ -141,6 +141,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
             string model_id = string.Empty;
             bool bUpdateADT = false;
             bool bFoundTwin = false;
+            bool bPatch = true;
             log.LogInformation($"OnTelemetryReceived");
             signalrData.data = Encoding.UTF8.GetString(eventData.Body.Array, eventData.Body.Offset, eventData.Body.Count);
 
@@ -197,6 +198,11 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                 {
                     if (twin.Id == deviceId)
                     {
+                        if (!twin.Contents.ContainsKey("Temperature"))
+                        {
+                            bPatch = false;
+                        }
+
                         bFoundTwin = true;
                         break;
                     }
@@ -257,13 +263,20 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                     {
                         log.LogInformation($"ADT service client connection created.");
                         var twinPatchData = new JsonPatchDocument();
-                        twinPatchData.AppendReplace("/Temperature", temperature);
+                        if (bPatch)
+                        {
+                            twinPatchData.AppendReplace("/Temperature", temperature);
+                        }
+                        else
+                        {
+                            twinPatchData.AppendAdd("/Temperature", temperature);
+                        }
                         var updateResponse = await _adtClient.UpdateDigitalTwinAsync(deviceId, twinPatchData);
                         log.LogInformation($"ADT Response : {updateResponse.Status}");
                     }
-                    catch (Exception e)
+                    catch (RequestFailedException e)
                     {
-                        log.LogError($"Error ADT : {e.Message}");
+                        log.LogError($"Error UpdateDigitalTwinAsync():{e.Status}/{e.ErrorCode} : {e.Message}");
                     }
                 }
             }
