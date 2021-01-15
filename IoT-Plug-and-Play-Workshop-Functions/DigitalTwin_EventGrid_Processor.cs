@@ -162,7 +162,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                                         {
                                             postcontent = new JObject(new JProperty("States", new JArray(
                                                 new JObject(new JProperty("keyName", "light"),
-                                                     new JProperty("value", operation["value"]),
+                                                     new JProperty("value", operation["value"].ToString()),
                                                      new JProperty("eventTimestamp", DateTime.Now.ToString("s"))))));
                                         }
 
