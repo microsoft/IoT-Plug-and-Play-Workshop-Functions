@@ -143,17 +143,28 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                             foreach (var operation in message["data"]["patch"])
                             {
 
-                                if (operation["path"].ToString() == "/Temperature")
+                                if (operation["path"].ToString() == "/Temperature" || operation["path"].ToString() == "/Light")
                                 {
                                     string opValue = operation["op"].ToString();
-                                    log.LogInformation($"Found Temperature {operation["op"].ToString()}");
+                                    log.LogInformation($"Found {operation["op"].ToString()}");
 
                                     if (opValue.Equals("replace") || opValue.Equals("add"))
                                     {   //Update the maps feature stateset
-                                        var postcontent = new JObject(new JProperty("States", new JArray(
-                                            new JObject(new JProperty("keyName", "temperature"),
-                                                 new JProperty("value", operation["value"].ToString()),
-                                                 new JProperty("eventTimestamp", DateTime.Now.ToString("s"))))));
+                                        var postcontent;
+
+                                        if (operation["path"].ToString() == "/Temperature")
+                                        {
+                                            postcontent = new JObject(new JProperty("States", new JArray(
+                                                new JObject(new JProperty("keyName", "temperature"),
+                                                     new JProperty("value", operation["value"].ToString()),
+                                                     new JProperty("eventTimestamp", DateTime.Now.ToString("s"))))));
+                                        } else if (operation["path"].ToString() == "/Light")
+                                        {
+                                            postcontent = new JObject(new JProperty("States", new JArray(
+                                                new JObject(new JProperty("keyName", "light"),
+                                                     new JProperty("value", operation["value"].ToString()),
+                                                     new JProperty("eventTimestamp", DateTime.Now.ToString("s"))))));
+                                        }
 
                                         log.LogInformation($"Updating Map Unit {featureId} Temperature to {operation["value"].ToString()}");
 
