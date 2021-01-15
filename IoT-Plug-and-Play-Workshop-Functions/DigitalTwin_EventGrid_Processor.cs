@@ -150,11 +150,11 @@ namespace IoT_Plug_and_Play_Workshop_Functions
 
                                     if (opValue.Equals("replace") || opValue.Equals("add"))
                                     {   //Update the maps feature stateset
-                                        var postcontent;
+                                        JObject postcontent = null;
 
                                         if (operation["path"].ToString() == "/Temperature")
                                         {
-                                            postcontent = new JObject(new JProperty("States", new JArray(
+                                            postcontent. = new JObject(new JProperty("States", new JArray(
                                                 new JObject(new JProperty("keyName", "temperature"),
                                                      new JProperty("value", operation["value"].ToString()),
                                                      new JProperty("eventTimestamp", DateTime.Now.ToString("s"))))));
