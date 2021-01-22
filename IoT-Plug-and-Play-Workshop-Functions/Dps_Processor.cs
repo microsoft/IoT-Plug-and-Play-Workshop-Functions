@@ -83,7 +83,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                 AsyncPageable<DigitalTwinsModelData> allModels = _adtClient.GetModelsAsync();
                 await foreach (DigitalTwinsModelData model in allModels)
                 {
-                    Console.WriteLine($"Retrieved model '{model.Id}', " +
+                    log.LogInformation($"Retrieved model '{model.Id}', " +
                         $"display name '{model.LanguageDisplayNames["en"]}', " +
                         $"uploaded on '{model.UploadedOn}', " +
                         $"and decommissioned '{model.Decommissioned}'");
