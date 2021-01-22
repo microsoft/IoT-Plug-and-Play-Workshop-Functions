@@ -19,7 +19,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
             ILogger log)
         {
             string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
-            log.LogDebug($"Request.Body: {requestBody}");
+            log.LogInformation($"Request.Body: {requestBody}");
             dynamic data = JsonConvert.DeserializeObject(requestBody);
 
             ResponseObj obj = new ResponseObj();
