@@ -22,9 +22,21 @@ namespace IoT_Plug_and_Play_Workshop_Functions
             log.LogInformation($"Request.Body: {requestBody}");
             dynamic data = JsonConvert.DeserializeObject(requestBody);
 
-            ResponseObj obj = new ResponseObj();
+            string registrationId = data?.deviceRuntimeContext?.registrationId;
+            string message = string.Empty;
 
-            return (ActionResult)new OkObjectResult(obj);
+            if (registrationId == null)
+            {
+                message = "Registration ID not provided";
+            }
+            else
+            {
+                dynamic payload = data?.deviceRuntimeContext?.payload;
+                string modelId = payload.modelId;
+                log.LogInformation($"ModelId: {modelId}");
+            }
+
+            return new BadRequestObjectResult(message);
         }
     }
 
