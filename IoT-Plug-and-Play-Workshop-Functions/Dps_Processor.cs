@@ -180,8 +180,8 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                         Metadata = { ModelId = dtmi },
                     };
 
-                    await _adtClient.CreateOrReplaceDigitalTwinAsync(regId, twinData);
-                    log.LogInformation($"Digital Twin {regId} (Model : {dtmi}) created");
+                    Response<BasicDigitalTwin> response = await _adtClient.CreateOrReplaceDigitalTwinAsync(regId, twinData);
+                    log.LogInformation($"Digital Twin {response.Value.Id} (Model : {response.Value.Metadata.ModelId}) created");
                 }
                 catch (RequestFailedException rex)
                 {
