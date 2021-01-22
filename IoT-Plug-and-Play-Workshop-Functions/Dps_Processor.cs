@@ -11,6 +11,7 @@ using Azure.DigitalTwins.Core;
 using Azure.Identity;
 using Azure.Core.Pipeline;
 using System.Net.Http;
+using Azure;
 
 namespace IoT_Plug_and_Play_Workshop_Functions
 {
@@ -45,7 +46,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
 
                 log.LogInformation($"RegID: {registrationId} ModelId: {modelId} Hub: {hubs[0]}");
 
-                //await ProcessADT(modelId, registrationId, log);
+                await ProcessADT(modelId, registrationId, log);
 
                 response = new ResponseObj();
 
@@ -79,7 +80,8 @@ namespace IoT_Plug_and_Play_Workshop_Functions
 
             if (_adtClient != null)
             {
-
+                Response<DigitalTwinsModelData> modelData = await _adtClient.GetModelAsync(dtmi);
+                log.LogInformation($"Retrieved Model {modelData}");
             }
 
         }
