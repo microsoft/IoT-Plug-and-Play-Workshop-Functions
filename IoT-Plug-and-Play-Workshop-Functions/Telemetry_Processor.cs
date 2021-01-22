@@ -271,7 +271,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                                 twinPatchData.AppendAdd($"/{telemetry.name}", (telemetry.dataKind == DTEntityKind.Integer) ? telemetry.dataInteger : telemetry.dataDouble);
                             }
 
-                            var updateResponse = await _adtClient.UpdateDigitalTwinAsync(deviceId, twinPatchData);
+                            var updateResponse = await _adtClient.UpdateDigitalTwinAsync(parentTwin.Id, twinPatchData);
                             log.LogInformation($"ADT Response : {updateResponse.Status}");
                         }
                         catch (RequestFailedException e)
