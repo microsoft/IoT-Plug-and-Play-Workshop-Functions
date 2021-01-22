@@ -7,12 +7,19 @@ using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
-using Microsoft.Azure.Devices.Provisioning.Service;
+using Azure.DigitalTwins.Core;
+using Azure.Identity;
+using Azure.Core.Pipeline;
+using System.Net.Http;
 
 namespace IoT_Plug_and_Play_Workshop_Functions
 {
     public static class Dps_Processor
     {
+        private static readonly HttpClient _httpClient = new HttpClient();
+        private static string _adtServiceUrl = Environment.GetEnvironmentVariable("ADT_HOST_URL");
+        private static DigitalTwinsClient _adtClient = null;
+
         [FunctionName("Dps_Processor")]
         public static async Task<IActionResult> Run(
             [HttpTrigger(AuthorizationLevel.Function, "get", "post", Route = null)] HttpRequest req,
@@ -20,10 +27,12 @@ namespace IoT_Plug_and_Play_Workshop_Functions
         {
             string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
             log.LogInformation($"Request.Body: {requestBody}");
-            dynamic data = JsonConvert.DeserializeObject(requestBody);
-
-            string registrationId = data?.deviceRuntimeContext?.registrationId;
             string message = string.Empty;
+            ResponseObj response = null;
+
+            dynamic data = JsonConvert.DeserializeObject(requestBody);
+            string registrationId = data?.deviceRuntimeContext?.registrationId;
+            string[] hubs = data?.linkedHubs.ToObject<string[]>();
 
             if (registrationId == null)
             {
@@ -33,16 +42,52 @@ namespace IoT_Plug_and_Play_Workshop_Functions
             {
                 dynamic payload = data?.deviceRuntimeContext?.payload;
                 string modelId = payload.modelId;
-                log.LogInformation($"ModelId: {modelId}");
+
+                log.LogInformation($"RegID: {registrationId} ModelId: {modelId} Hub: {hubs[0]}");
+
+                //await ProcessADT(modelId, registrationId, log);
+
+                response = new ResponseObj();
+
+                response.iotHubHostName = hubs[0];
             }
 
-            return new BadRequestObjectResult(message);
+            return (string.IsNullOrEmpty(message)) ? (ActionResult)new OkObjectResult(response) : new BadRequestObjectResult(message);
+        }
+
+        public static async Task ProcessADT(string dtmi, string regId, ILogger log)
+        {
+
+            if (string.IsNullOrEmpty(dtmi))
+            {
+                return;
+
+            }
+            else if (_adtClient == null && !string.IsNullOrEmpty(_adtServiceUrl))
+            {
+                try
+                {
+                    var credentials = new DefaultAzureCredential();
+                    _adtClient = new DigitalTwinsClient(new Uri(_adtServiceUrl), credentials, new DigitalTwinsClientOptions { Transport = new HttpClientTransport(_httpClient) });
+                    log.LogInformation("ADT service client connection created.");
+                }
+                catch (Exception e)
+                {
+                    log.LogError($"ADT service client connection failed. {e}");
+                }
+            }
+
+            if (_adtClient != null)
+            {
+
+            }
+
         }
     }
 
     public class ResponseObj
     {
         public string iotHubHostName { get; set; }
-        public TwinState initialTwin { get; set; }
+//        public TwinState initialTwin { get; set; }
     }
 }
