@@ -66,7 +66,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
         public static async Task<bool> ProcessADT(string dtmi, string regId, ILogger log)
         {
 
-            if (string.IsNullOrEmpty(dtmi))
+            if (string.IsNullOrEmpty(dtmi) || string.IsNullOrEmpty(regId))
             {
                 return false;
             }
@@ -170,9 +170,28 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                         return false;
                     }
                 }
+
+                // create a new twin
+                try
+                {
+                    BasicDigitalTwin twinData = new BasicDigitalTwin
+                    {
+                        Id = regId,
+                        Metadata = { ModelId = dtmi },
+                    };
+
+                    await _adtClient.CreateOrReplaceDigitalTwinAsync(regId, twinData);
+                    log.LogInformation($"Digital Twin {regId} (Model : {dtmi}) created");
+                }
+                catch (RequestFailedException rex)
+                {
+                    log.LogError($"CreateOrReplaceDigitalTwinAsync: {rex.Status}:{rex.Message}");
+                    return false;
+                }
+
             }
 
-            return true;
+            return false;
         }
 
         private static bool IsValidDtmi(string dtmi)
