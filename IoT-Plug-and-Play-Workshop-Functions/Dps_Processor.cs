@@ -15,6 +15,7 @@ using Azure;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using System.Net;
+using Newtonsoft.Json.Linq;
 
 namespace IoT_Plug_and_Play_Workshop_Functions
 {
@@ -85,60 +86,85 @@ namespace IoT_Plug_and_Play_Workshop_Functions
 
             if (_adtClient != null)
             {
-                bool bFound = false;
-                AsyncPageable<DigitalTwinsModelData> allModels = _adtClient.GetModelsAsync();
-                await foreach (DigitalTwinsModelData model in allModels)
+                // check if twin exists for this device
+                try
                 {
+                    //Response<DigitalTwinsModelData> modelData = await _adtClient.GetModelAsync(dtmi);
+                    //if (modelData == null)
+                    //{
+                    //    log.LogError($"GetModelAsync returned empty model data for {dtmi}");
+                    //    return false;
+                    //}
 
-                    if (model.Id.Equals(dtmi))
+                    string query = $"SELECT * FROM DigitalTwins T WHERE $dtId = '{regId}' AND IS_OF_MODEL('{dtmi}')";
+                    AsyncPageable<BasicDigitalTwin> asyncPageableResponse = _adtClient.QueryAsync<BasicDigitalTwin>(query);
+
+                    await foreach (BasicDigitalTwin twin in asyncPageableResponse)
                     {
-                        log.LogInformation($"Found model ID : {dtmi}");
-                        bFound = true;
-                        break;
+                        // Get DT ID from the Twin
+                        log.LogInformation($"Twin '{twin.id}' with Registration ID '{regId}' found in DT");
                     }
                 }
-
-                if (!bFound)
+                catch (RequestFailedException rex)
                 {
-                    // create a model
-                    // 1. Get model definition
-                    string modelContent = string.Empty;
-                    var modelList = new List<string>();
-                    string dtmiPath = DtmiToPath(dtmi.ToString());
-
-
-                    // if private repo is provided, resolve model with private repo first.
-                    if (!string.IsNullOrEmpty(_modelRepoUrl))
-                    {
-                        modelContent = getModelContent(_modelRepoUrl, dtmiPath, _gitToken);
-                    }
-
-                    if (string.IsNullOrEmpty(modelContent))
-                    {
-                        modelContent = getModelContent("https://devicemodels.azure.com", dtmiPath, string.Empty);
-                    }
-
-                    if (string.IsNullOrEmpty(modelContent))
-                    {
-                        return false;
-                    }
-
-                    modelList.Add(modelContent);
-
-                    try
-                    {
-                        await _adtClient.CreateModelsAsync(modelList);
-                    }
-                    catch (RequestFailedException rex)
-                    {
-                        log.LogError($"CreateModelsAsync: {rex.Status}:{rex.Message}");
-                        return false;
-                    }
+                    log.LogError($"GetModelAsync: {rex.Status}:{rex.Message}");
+                    return false;
                 }
+
+                //bool bFound = false;
+                //AsyncPageable<DigitalTwinsModelData> allModels = _adtClient.GetModelsAsync();
+                //await foreach (DigitalTwinsModelData model in allModels)
+                //{
+
+                //    if (model.Id.Equals(dtmi))
+                //    {
+                //        log.LogInformation($"Found model ID : {dtmi}");
+                //        bFound = true;
+                //        break;
+                //    }
+                //}
+
+                //if (!bFound)
+                //{
+                //    // create a model
+                //    // 1. Get model definition
+                //    string modelContent = string.Empty;
+                //    var modelList = new List<string>();
+                //    string dtmiPath = DtmiToPath(dtmi.ToString());
+
+
+                //    // if private repo is provided, resolve model with private repo first.
+                //    if (!string.IsNullOrEmpty(_modelRepoUrl))
+                //    {
+                //        modelContent = getModelContent(_modelRepoUrl, dtmiPath, _gitToken);
+                //    }
+
+                //    if (string.IsNullOrEmpty(modelContent))
+                //    {
+                //        modelContent = getModelContent("https://devicemodels.azure.com", dtmiPath, string.Empty);
+                //    }
+
+                //    if (string.IsNullOrEmpty(modelContent))
+                //    {
+                //        return false;
+                //    }
+
+                //    modelList.Add(modelContent);
+
+                //    try
+                //    {
+                //        await _adtClient.CreateModelsAsync(modelList);
+                //        log.LogInformation($"Digital Twin Model {dtmi} created");
+                //    }
+                //    catch (RequestFailedException rex)
+                //    {
+                //        log.LogError($"CreateModelsAsync: {rex.Status}:{rex.Message}");
+                //        return false;
+                //    }
+                //}
             }
 
             return true;
-
         }
 
         private static bool IsValidDtmi(string dtmi)
