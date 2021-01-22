@@ -30,7 +30,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
         [FunctionName("DigitalTwin_EventGrid_Processor")]
         public static async Task Run([EventGridTrigger] EventGridEvent eventGridEvent, ILogger log)
         {
-            if (!string.IsNullOrEmpty(_adtServiceUrl))
+            if (_adtClient == null && !string.IsNullOrEmpty(_adtServiceUrl))
             {
                 try
                 {
@@ -53,7 +53,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                     JObject message = (JObject)JsonConvert.DeserializeObject(eventGridEvent.Data.ToString());
                     string unitId = string.Empty;
 
-                    log.LogInformation($"Received Digital Twin Event from {twinId} : {eventGridEvent.EventType} : {message["data"]}");
+                    log.LogInformation($"Received {eventGridEvent.EventType} from {twinId} : {message["data"]}");
 
                     // Process Digital Twin Update Event for the room model
                     if (message["data"]["modelId"].ToString() == "dtmi:com:example:Room;1")
@@ -68,6 +68,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                                 // Query digital twin
                                 var query = $"SELECT* FROM digitaltwins Device WHERE Device.$dtId = '{twinId}'";
                                 AsyncPageable<BasicDigitalTwin> asyncPageableResponse = _adtClient.QueryAsync<BasicDigitalTwin>(query);
+
                                 await foreach (BasicDigitalTwin twin in asyncPageableResponse)
                                 {
                                     log.LogInformation($"Found Twin {twin.Id}");
@@ -77,10 +78,12 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                                         if (twin.Contents.ContainsKey("UnitId"))
                                         {
                                             unitId = twin.Contents["UnitId"].ToString();
+                                            log.LogInformation($"Found Unit ID {unitId}");
                                         }
                                         else
                                         {
                                             string roomNumber = string.Empty;
+                                            log.LogInformation($"Unit ID not found {unitId}");
 
                                             if (twin.Contents.ContainsKey("RoomNumber"))
                                             {
