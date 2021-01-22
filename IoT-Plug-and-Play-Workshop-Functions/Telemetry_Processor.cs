@@ -134,14 +134,17 @@ namespace IoT_Plug_and_Play_Workshop_Functions
         // Process Telemetry
         // Add filtering etc as needed
         // leave signalrData.data to null if we do not want to send SignalR message
+        // This function needs refactoring.... to do list..
         private static async Task OnTelemetryReceived(NOTIFICATION_DATA signalrData, EventData eventData, ILogger log)
         {
-            double temperature = 0.0;
+            double temperature = -1.0;
+            long light = -1;
             string deviceId = eventData.SystemProperties["iothub-connection-device-id"].ToString();
             string model_id = string.Empty;
             bool bUpdateADT = false;
             bool bFoundTwin = false;
-            bool bPatch = true;
+            bool bPatchTemperature = true;
+            bool bPatchLight = true;
             log.LogInformation($"OnTelemetryReceived");
             signalrData.data = Encoding.UTF8.GetString(eventData.Body.Array, eventData.Body.Offset, eventData.Body.Count);
 
@@ -200,7 +203,12 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                     {
                         if (!twin.Contents.ContainsKey("Temperature"))
                         {
-                            bPatch = false;
+                            bPatchTemperature = false;
+                        }
+
+                        if (!twin.Contents.ContainsKey("Light"))
+                        {
+                            bPatchLight = false;
                         }
 
                         bFoundTwin = true;
@@ -252,6 +260,25 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                                     temperature = (double)data[telemetryInfo.Name];
                                     bUpdateADT = true;
                                 }
+                                //else if ()
+                                //{
+
+                                //}
+                            }
+                        }
+                        else
+                        {
+                            // no semantic type specified
+                            // For Seeed WIO Terminal Light sensor
+                            if (model_id.StartsWith("dtmi:seeedkk:wioterminal"))
+                            {
+                                if (telemetryInfo.Name.Equals("light"))
+                                {
+                                    JObject data = JObject.Parse(signalrData.data);
+                                    light = (long)data[telemetryInfo.Name];
+                                    Console.WriteLine($"Found WIOTerminal");
+                                    bUpdateADT = true;
+                                }
                             }
                         }
                     }
@@ -263,13 +290,29 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                     {
                         log.LogInformation($"ADT service client connection created.");
                         var twinPatchData = new JsonPatchDocument();
-                        if (bPatch)
+
+                        if (temperature != -1.0)
                         {
-                            twinPatchData.AppendReplace("/Temperature", temperature);
+                            if (bPatchTemperature)
+                            {
+                                twinPatchData.AppendReplace("/Temperature", temperature);
+                            }
+                            else
+                            {
+                                twinPatchData.AppendAdd("/Temperature", temperature);
+                            }
                         }
-                        else
+
+                        if (light != -1)
                         {
-                            twinPatchData.AppendAdd("/Temperature", temperature);
+                            if (bPatchLight)
+                            {
+                                twinPatchData.AppendReplace("/Light", light);
+                            }
+                            else
+                            {
+                                twinPatchData.AppendAdd("/Light", light);
+                            }
                         }
                         var updateResponse = await _adtClient.UpdateDigitalTwinAsync(deviceId, twinPatchData);
                         log.LogInformation($"ADT Response : {updateResponse.Status}");
