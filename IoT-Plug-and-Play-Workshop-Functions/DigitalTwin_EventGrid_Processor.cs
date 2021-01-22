@@ -142,7 +142,6 @@ namespace IoT_Plug_and_Play_Workshop_Functions
 
                             foreach (var operation in message["data"]["patch"])
                             {
-
                                 if (operation["path"].ToString() == "/Temperature" || operation["path"].ToString() == "/Light")
                                 {
                                     string opValue = operation["op"].ToString();
@@ -158,7 +157,8 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                                                 new JObject(new JProperty("keyName", "temperature"),
                                                      new JProperty("value", operation["value"].ToString()),
                                                      new JProperty("eventTimestamp", DateTime.Now.ToString("s"))))));
-                                        } else if (operation["path"].ToString() == "/Light")
+                                        } 
+                                        else if (operation["path"].ToString() == "/Light")
                                         {
                                             postcontent = new JObject(new JProperty("States", new JArray(
                                                 new JObject(new JProperty("keyName", "light"),
@@ -224,6 +224,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                 await foreach (IncomingRelationship ie in rels)
                 {
                     if (ie.RelationshipName == relname)
+                        log.LogInformation($"FindParentAsync {ie.SourceId}") for { child};
                         return (ie.SourceId);
                 }
             }
@@ -231,6 +232,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
             {
                 log.LogError($"Error FindParentAsync() :{e.Status}:{e.Message}");
             }
+            log.LogInformation($"FindParentAsync No Parent for {child}");
             return null;
         }
 
