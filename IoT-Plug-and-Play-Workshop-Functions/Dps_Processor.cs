@@ -80,8 +80,14 @@ namespace IoT_Plug_and_Play_Workshop_Functions
 
             if (_adtClient != null)
             {
-                Response<DigitalTwinsModelData> modelData = await _adtClient.GetModelAsync(dtmi);
-                log.LogInformation($"Retrieved Model {modelData}");
+                AsyncPageable<DigitalTwinsModelData> allModels = _adtClient.GetModelsAsync();
+                await foreach (DigitalTwinsModelData model in allModels)
+                {
+                    Console.WriteLine($"Retrieved model '{model.Id}', " +
+                        $"display name '{model.LanguageDisplayNames["en"]}', " +
+                        $"uploaded on '{model.UploadedOn}', " +
+                        $"and decommissioned '{model.Decommissioned}'");
+                }
             }
 
         }
