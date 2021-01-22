@@ -75,9 +75,9 @@ namespace IoT_Plug_and_Play_Workshop_Functions
 
                                     if (twin.Id == twinId)
                                     {
-                                        if (twin.Contents.ContainsKey("UnitId"))
+                                        if (twin.Contents.ContainsKey("unitId"))
                                         {
-                                            unitId = twin.Contents["UnitId"].ToString();
+                                            unitId = twin.Contents["unitId"].ToString();
                                             log.LogInformation($"Found Unit ID {unitId}");
                                         }
                                         else
@@ -118,7 +118,6 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                                                     // Update Room Twin so we don't have to query Azure Map.
                                                     await UpdateTwinPropertyAsync(_adtClient, twinId, "/unitId", unitId, false, log);
                                                 }
-
                                             }
                                         }
 
