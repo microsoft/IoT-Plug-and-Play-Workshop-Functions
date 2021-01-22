@@ -12,14 +12,20 @@ using Azure.Identity;
 using Azure.Core.Pipeline;
 using System.Net.Http;
 using Azure;
+using System.Collections.Generic;
+using System.Text.RegularExpressions;
+using System.Net;
 
 namespace IoT_Plug_and_Play_Workshop_Functions
 {
     public static class Dps_Processor
     {
         private static readonly HttpClient _httpClient = new HttpClient();
+        private static readonly WebClient _webClient = new WebClient();
         private static string _adtServiceUrl = Environment.GetEnvironmentVariable("ADT_HOST_URL");
         private static DigitalTwinsClient _adtClient = null;
+        private static readonly string _modelRepoUrl = Environment.GetEnvironmentVariable("ModelRepository");
+        private static readonly string _gitToken = Environment.GetEnvironmentVariable("GitToken");
 
         [FunctionName("Dps_Processor")]
         public static async Task<IActionResult> Run(
@@ -56,13 +62,12 @@ namespace IoT_Plug_and_Play_Workshop_Functions
             return (string.IsNullOrEmpty(message)) ? (ActionResult)new OkObjectResult(response) : new BadRequestObjectResult(message);
         }
 
-        public static async Task ProcessADT(string dtmi, string regId, ILogger log)
+        public static async Task<bool> ProcessADT(string dtmi, string regId, ILogger log)
         {
 
             if (string.IsNullOrEmpty(dtmi))
             {
-                return;
-
+                return false;
             }
             else if (_adtClient == null && !string.IsNullOrEmpty(_adtServiceUrl))
             {
@@ -80,16 +85,103 @@ namespace IoT_Plug_and_Play_Workshop_Functions
 
             if (_adtClient != null)
             {
+                bool bFound = false;
                 AsyncPageable<DigitalTwinsModelData> allModels = _adtClient.GetModelsAsync();
                 await foreach (DigitalTwinsModelData model in allModels)
                 {
-                    log.LogInformation($"Retrieved model '{model.Id}', " +
-                        $"display name '{model.LanguageDisplayNames["en"]}', " +
-                        $"uploaded on '{model.UploadedOn}', " +
-                        $"and decommissioned '{model.Decommissioned}'");
+
+                    if (model.Id.Equals(dtmi))
+                    {
+                        log.LogInformation($"Found model ID : {dtmi}");
+                        bFound = true;
+                        break;
+                    }
+                }
+
+                if (!bFound)
+                {
+                    // create a model
+                    // 1. Get model definition
+                    string modelContent = string.Empty;
+                    var modelList = new List<string>();
+                    string dtmiPath = DtmiToPath(dtmi.ToString());
+
+
+                    // if private repo is provided, resolve model with private repo first.
+                    if (!string.IsNullOrEmpty(_modelRepoUrl))
+                    {
+                        modelContent = getModelContent(_modelRepoUrl, dtmiPath, _gitToken);
+                    }
+
+                    if (string.IsNullOrEmpty(modelContent))
+                    {
+                        modelContent = getModelContent("https://devicemodels.azure.com", dtmiPath, string.Empty);
+                    }
+
+                    if (string.IsNullOrEmpty(modelContent))
+                    {
+                        return false;
+                    }
+
+                    modelList.Add(modelContent);
+
+                    try
+                    {
+                        await _adtClient.CreateModelsAsync(modelList);
+                    }
+                    catch (RequestFailedException rex)
+                    {
+                        log.LogError($"CreateModelsAsync: {rex.Status}:{rex.Message}");
+                        return false;
+                    }
                 }
             }
 
+            return true;
+
+        }
+
+        private static bool IsValidDtmi(string dtmi)
+        {
+            // Regex defined at https://github.com/Azure/digital-twin-model-identifier#validation-regular-expressions
+            Regex rx = new Regex(@"^dtmi:[A-Za-z](?:[A-Za-z0-9_]*[A-Za-z0-9])?(?::[A-Za-z](?:[A-Za-z0-9_]*[A-Za-z0-9])?)*;[1-9][0-9]{0,8}$");
+            return rx.IsMatch(dtmi);
+        }
+
+        private static string DtmiToPath(string dtmi)
+        {
+            if (!IsValidDtmi(dtmi))
+            {
+                return null;
+            }
+            // dtmi:com:example:Thermostat;1 -> dtmi/com/example/thermostat-1.json
+            return $"/{dtmi.ToLowerInvariant().Replace(":", "/").Replace(";", "-")}.json";
+        }
+
+        private static string getModelContent(string repoUrl, string dtmiPath, string gitToken)
+        {
+            string modelContent = string.Empty;
+            Uri modelRepoUrl = new Uri(repoUrl);
+            Uri fullPath = new Uri($"{modelRepoUrl}{dtmiPath}");
+            string fullyQualifiedPath = fullPath.ToString();
+
+            if (!string.IsNullOrEmpty(gitToken))
+            {
+                var token = $"token {gitToken}";
+                _webClient.Headers.Add("Authorization", token);
+            }
+
+            try
+            {
+                modelContent = _webClient.DownloadString(fullyQualifiedPath);
+            }
+            catch (System.Net.WebException e)
+            {
+                Console.WriteLine($"Exception in getModelContent() : {e.Message}");
+                return string.Empty;
+            }
+
+            return modelContent;
         }
     }
 
