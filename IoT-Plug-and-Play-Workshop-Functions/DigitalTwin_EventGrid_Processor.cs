@@ -185,6 +185,29 @@ namespace IoT_Plug_and_Play_Workshop_Functions
 
                         if (parentId != null)
                         {
+                            bool bPatchTemperature = true;
+                            bool bPatchLight = true;
+                            bool bPatch = true;
+
+                            var query = $"SELECT* FROM digitaltwins Device WHERE Device.$dtId = '{parentId}'";
+                            AsyncPageable<BasicDigitalTwin> asyncPageableResponse = _adtClient.QueryAsync<BasicDigitalTwin>(query);
+                            await foreach (BasicDigitalTwin twin in asyncPageableResponse)
+                            {
+                                if (twin.Id == parentId)
+                                {
+                                    if (!twin.Contents.ContainsKey("Temperature"))
+                                    {
+                                        bPatchTemperature = false;
+                                    }
+
+                                    if (!twin.Contents.ContainsKey("Light"))
+                                    {
+                                        bPatchLight = false;
+                                    }
+                                    break;
+                                }
+                            }
+
                             // log.LogInformation($"Found Parent : Twin Id {parentId}");
                             // Read properties which values have been changed in each operation
                             foreach (var operation in message["data"]["patch"])
@@ -199,7 +222,17 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                                     {
                                         try
                                         {
-                                            await UpdateTwinPropertyAsync(_adtClient, parentId, propertyPath, operation["value"].Value<float>(), true, log);
+                                            if (propertyPath.Equals("/Temperature"))
+                                            {
+                                                bPatch = bPatchTemperature;
+                                            }
+
+                                            if (propertyPath.Equals("/Light"))
+                                            {
+                                                bPatch = bPatchLight;
+                                            }
+
+                                            await UpdateTwinPropertyAsync(_adtClient, parentId, propertyPath, operation["value"].Value<float>(), bPatch, log);
                                         }
                                         catch (RequestFailedException e)
                                         {
