@@ -224,7 +224,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                 await foreach (IncomingRelationship ie in rels)
                 {
                     if (ie.RelationshipName == relname)
-                        log.LogInformation($"FindParentAsync {ie.SourceId} for {child}");
+                        //log.LogInformation($"FindParentAsync {ie.SourceId} for {child}");
                         return (ie.SourceId);
                 }
             }
@@ -232,7 +232,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
             {
                 log.LogError($"Error FindParentAsync() :{e.Status}:{e.Message}");
             }
-            log.LogInformation($"FindParentAsync No Parent for {child}");
+            //log.LogInformation($"FindParentAsync No Parent for {child}");
             return null;
         }
 
