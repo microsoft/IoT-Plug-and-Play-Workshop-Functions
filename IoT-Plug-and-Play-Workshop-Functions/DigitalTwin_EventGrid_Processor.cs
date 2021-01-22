@@ -195,7 +195,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                                 {
                                     string propertyPath = ((string)operation["path"]);
 
-                                    if (propertyPath.Equals("/Temperature"))
+                                    if (propertyPath.Equals("/Temperature") || propertyPath.Equals("/Light"))
                                     {
                                         try
                                         {
