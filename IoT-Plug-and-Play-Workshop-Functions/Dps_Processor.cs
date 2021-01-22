@@ -86,6 +86,8 @@ namespace IoT_Plug_and_Play_Workshop_Functions
 
             if (_adtClient != null)
             {
+                bool bFoundTwin = false;
+                bool bFoundModel = false;
                 // check if twin exists for this device
                 try
                 {
@@ -103,6 +105,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                     {
                         // Get DT ID from the Twin
                         log.LogInformation($"Twin '{twin.Id}' with Registration ID '{regId}' found in DT");
+                        bFoundTwin = true;
                     }
                 }
                 catch (RequestFailedException rex)
@@ -111,57 +114,62 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                     return false;
                 }
 
-                //bool bFound = false;
-                //AsyncPageable<DigitalTwinsModelData> allModels = _adtClient.GetModelsAsync();
-                //await foreach (DigitalTwinsModelData model in allModels)
-                //{
+                if (bFoundTwin)
+                {
+                    log.LogInformation($"Twin found. ID: {regId} (Model: {dtmi})");
+                    return true;
+                }
 
-                //    if (model.Id.Equals(dtmi))
-                //    {
-                //        log.LogInformation($"Found model ID : {dtmi}");
-                //        bFound = true;
-                //        break;
-                //    }
-                //}
+                AsyncPageable<DigitalTwinsModelData> allModels = _adtClient.GetModelsAsync();
+                await foreach (DigitalTwinsModelData model in allModels)
+                {
 
-                //if (!bFound)
-                //{
-                //    // create a model
-                //    // 1. Get model definition
-                //    string modelContent = string.Empty;
-                //    var modelList = new List<string>();
-                //    string dtmiPath = DtmiToPath(dtmi.ToString());
+                    if (model.Id.Equals(dtmi))
+                    {
+                        log.LogInformation($"Found model ID : {dtmi}");
+                        bFoundModel = true;
+                        break;
+                    }
+                }
+
+                if (!bFoundModel)
+                {
+                    // create a model
+                    // 1. Get model definition
+                    string modelContent = string.Empty;
+                    var modelList = new List<string>();
+                    string dtmiPath = DtmiToPath(dtmi.ToString());
 
 
-                //    // if private repo is provided, resolve model with private repo first.
-                //    if (!string.IsNullOrEmpty(_modelRepoUrl))
-                //    {
-                //        modelContent = getModelContent(_modelRepoUrl, dtmiPath, _gitToken);
-                //    }
+                    // if private repo is provided, resolve model with private repo first.
+                    if (!string.IsNullOrEmpty(_modelRepoUrl))
+                    {
+                        modelContent = getModelContent(_modelRepoUrl, dtmiPath, _gitToken);
+                    }
 
-                //    if (string.IsNullOrEmpty(modelContent))
-                //    {
-                //        modelContent = getModelContent("https://devicemodels.azure.com", dtmiPath, string.Empty);
-                //    }
+                    if (string.IsNullOrEmpty(modelContent))
+                    {
+                        modelContent = getModelContent("https://devicemodels.azure.com", dtmiPath, string.Empty);
+                    }
 
-                //    if (string.IsNullOrEmpty(modelContent))
-                //    {
-                //        return false;
-                //    }
+                    if (string.IsNullOrEmpty(modelContent))
+                    {
+                        return false;
+                    }
 
-                //    modelList.Add(modelContent);
+                    modelList.Add(modelContent);
 
-                //    try
-                //    {
-                //        await _adtClient.CreateModelsAsync(modelList);
-                //        log.LogInformation($"Digital Twin Model {dtmi} created");
-                //    }
-                //    catch (RequestFailedException rex)
-                //    {
-                //        log.LogError($"CreateModelsAsync: {rex.Status}:{rex.Message}");
-                //        return false;
-                //    }
-                //}
+                    try
+                    {
+                        await _adtClient.CreateModelsAsync(modelList);
+                        log.LogInformation($"Digital Twin Model {dtmi} created");
+                    }
+                    catch (RequestFailedException rex)
+                    {
+                        log.LogError($"CreateModelsAsync: {rex.Status}:{rex.Message}");
+                        return false;
+                    }
+                }
             }
 
             return true;
