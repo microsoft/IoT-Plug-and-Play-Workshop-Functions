@@ -102,7 +102,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                     await foreach (BasicDigitalTwin twin in asyncPageableResponse)
                     {
                         // Get DT ID from the Twin
-                        log.LogInformation($"Twin '{twin.id}' with Registration ID '{regId}' found in DT");
+                        log.LogInformation($"Twin '{twin.Id}' with Registration ID '{regId}' found in DT");
                     }
                 }
                 catch (RequestFailedException rex)
