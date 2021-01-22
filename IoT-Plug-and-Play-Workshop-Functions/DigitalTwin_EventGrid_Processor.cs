@@ -83,7 +83,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                                         else
                                         {
                                             string roomNumber = string.Empty;
-                                            log.LogInformation($"Unit ID not found {unitId}");
+                                            log.LogInformation($"Unit ID not found for {twinId}");
 
                                             if (twin.Contents.ContainsKey("RoomNumber"))
                                             {
@@ -93,7 +93,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                                             {
                                                 foreach (var operation in message["data"]["patch"])
                                                 {
-                                                    if (operation["op"].ToString() == "add" && operation["path"].ToString() == "/RoomNumber")
+                                                    if (operation["op"].ToString() == "add" && operation["path"].ToString() == "/roomNumber")
                                                     {
                                                         roomNumber = operation["value"].ToString();
                                                         break;
