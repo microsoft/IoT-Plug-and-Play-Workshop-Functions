@@ -136,9 +136,10 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                         else
                         {
                             unitId = unit.unitId;
+                            log.LogInformation($"Unit ID {unitId} found in cache");
                         }
 
-                        if (!string.IsNullOrEmpty(_mapKey) && !string.IsNullOrEmpty(_mapStatesetId) && !string.IsNullOrEmpty(unitId))
+                        if (!string.IsNullOrEmpty(unitId))
                         {
                             string featureId = unitId;
 
@@ -155,7 +156,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                                     if (opValue.Equals("replace") || opValue.Equals("add"))
                                     {   //Update the maps feature stateset
                                         var postcontent = new JObject(new JProperty("States", new JArray(
-                                            new JObject(new JProperty("keyName", "temperature"),
+                                            new JObject(new JProperty("keyName", operation["path"].ToString()),
                                                  new JProperty("value", operation["value"].ToString()),
                                                  new JProperty("eventTimestamp", DateTime.Now.ToString("s"))))));
 
