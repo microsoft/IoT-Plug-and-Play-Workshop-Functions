@@ -134,6 +134,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
         // Process Telemetry
         // Add filtering etc as needed
         // leave signalrData.data to null if we do not want to send SignalR message
+        // This function needs refactoring.... to do list..
         private static async Task OnTelemetryReceived(NOTIFICATION_DATA signalrData, EventData eventData, ILogger log)
         {
             string deviceId = eventData.SystemProperties["iothub-connection-device-id"].ToString();
