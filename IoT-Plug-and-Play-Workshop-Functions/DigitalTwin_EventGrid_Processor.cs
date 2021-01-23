@@ -65,7 +65,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                         {
                             try
                             {
-                                Response<BasicDigitalTwin> roomTwin = await _adtClient.GetDigitalTwinAsync<BasicDigitalTwin>(ie.SourceId);
+                                Response<BasicDigitalTwin> roomTwin = await _adtClient.GetDigitalTwinAsync<BasicDigitalTwin>(twinId);
 
                                 if (roomTwin != null)
                                 {
