@@ -45,7 +45,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                 }
             }
 
-            if (_adtClient != null)
+            if (_adtClient != null && !string.IsNullOrEmpty(_mapKey) && !string.IsNullOrEmpty(_mapStatesetId))
             {
                 if (eventGridEvent != null && eventGridEvent.Data != null)
                 {
@@ -65,55 +65,64 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                         {
                             try
                             {
+                                // Get Digital Twin for the room being updated
                                 Response<BasicDigitalTwin> roomTwin = await _adtClient.GetDigitalTwinAsync<BasicDigitalTwin>(twinId);
 
-                                if (roomTwin != null)
+                                if (roomTwin == null)
                                 {
-                                    log.LogInformation($"Found Room Twin {roomTwin.Value.Id}");
+                                    // this should not happen
+                                    log.LogError($"Digital Twin for {twinId} not found");
+                                    return;
+                                }
 
-                                    if (roomTwin.Value.Contents.ContainsKey("unitId"))
+                                log.LogInformation($"Found Room Twin {roomTwin.Value.Id}");
+
+                                // Check if unitid is already set or not
+                                if (roomTwin.Value.Contents.ContainsKey("unitId"))
+                                {
+                                    unitId = roomTwin.Value.Contents["unitId"].ToString();
+                                    log.LogInformation($"Found Unit ID {unitId}");
+                                }
+                                else
+                                {
+                                    // Unit ID not set.
+                                    string roomNumber = string.Empty;
+                                    log.LogInformation($"Unit ID not found for {twinId}");
+
+                                    // See if this is "adding" a room number
+                                    foreach (var operation in message["data"]["patch"])
                                     {
-                                        unitId = roomTwin.Value.Contents["unitId"].ToString();
-                                        log.LogInformation($"Found Unit ID {unitId}");
+                                        if (operation["op"].ToString() == "add" && operation["path"].ToString() == "/roomNumber")
+                                        {
+                                            roomNumber = operation["value"].ToString();
+                                            break;
+                                        }
                                     }
-                                    else
-                                    {
-                                        string roomNumber = string.Empty;
-                                        log.LogInformation($"Unit ID not found for {twinId}");
 
+                                    if (string.IsNullOrEmpty(roomNumber))
+                                    {
                                         if (roomTwin.Value.Contents.ContainsKey("roomNumber"))
                                         {
                                             roomNumber = roomTwin.Value.Contents["roomNumber"].ToString();
                                         }
-                                        else
-                                        {
-                                            foreach (var operation in message["data"]["patch"])
-                                            {
-                                                if (operation["op"].ToString() == "add" && operation["path"].ToString() == "/roomNumber")
-                                                {
-                                                    roomNumber = operation["value"].ToString();
-                                                    break;
-                                                }
-                                            }
-                                        }
+                                    }
 
-                                        if (!string.IsNullOrEmpty(roomNumber))
+                                    if (!string.IsNullOrEmpty(roomNumber))
+                                    {
+                                        log.LogInformation($"Getting Unit ID from Azure Map for {roomNumber}");
+                                        unitId = await getUnitId(roomNumber, log);
+                                        log.LogInformation($"Got Unit ID from Azure Map {unitId}");
+                                        if (!string.IsNullOrEmpty(unitId))
                                         {
-                                            log.LogInformation($"Getting Unit ID from Azure Map for {roomNumber}");
-                                            unitId = await getUnitId(roomNumber, log);
-                                            log.LogInformation($"Got Unit ID from Azure Map {unitId}");
-                                            if (!string.IsNullOrEmpty(unitId))
-                                            {
-                                                log.LogInformation("Caching Unit ID data");
-                                                // Cache unit ID
-                                                unit = new MapUnit();
-                                                unit.twinId = twinId;
-                                                unit.unitId = unitId;
-                                                UnitList.Add(unit);
+                                            log.LogInformation("Caching Unit ID data");
+                                            // Cache unit ID
+                                            unit = new MapUnit();
+                                            unit.twinId = twinId;
+                                            unit.unitId = unitId;
+                                            UnitList.Add(unit);
 
-                                                // Update Room Twin so we don't have to query Azure Map.
-                                                await UpdateTwinPropertyAsync(_adtClient, twinId, "/unitId", unitId, false, log);
-                                            }
+                                            // Update Room Twin so we don't have to query Azure Map.
+                                            await UpdateTwinPropertyAsync(_adtClient, twinId, "/unitId", unitId, false, log);
                                         }
                                     }
                                 }
