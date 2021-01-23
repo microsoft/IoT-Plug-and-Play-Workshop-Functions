@@ -160,7 +160,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                                                  new JProperty("value", operation["value"].ToString()),
                                                  new JProperty("eventTimestamp", DateTime.Now.ToString("s"))))));
 
-                                        log.LogInformation($"Updating Map Unit {featureId} Temperature to {operation["value"].ToString()}");
+                                        log.LogInformation($"Updating Map Unit {featureId} {operation["path"].ToString()} to {operation["value"].ToString()}");
 
                                         var response = await _httpClient.PostAsync(
                                             $"https://atlas.microsoft.com/featureState/state?api-version=1.0&statesetID={_mapStatesetId}&featureID={featureId}&subscription-key={_mapKey}",
@@ -172,60 +172,8 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                             }
                         }
                     }
-                    //else
-                    //{
-                    //    //Find and update parent Twin
-                    //    string parentId = await FindParentAsync(_adtClient, twinId, "contains", log);
-
-                    //    if (parentId != null)
-                    //    {
-                    //        log.LogInformation($"Found Parent : Twin Id {parentId}");
-                    //        Read properties which values have been changed in each operation
-                    //        foreach (var operation in message["data"]["patch"])
-                    //        {
-                    //            string opValue = (string)operation["op"];
-
-                    //            if (opValue.Equals("replace"))
-                    //            {
-                    //                string propertyPath = ((string)operation["path"]);
-
-                    //                if (propertyPath.Equals("/Temperature"))
-                    //                {
-                    //                    try
-                    //                    {
-                    //                        await UpdateTwinPropertyAsync(_adtClient, parentId, propertyPath, operation["value"].Value<float>(), true, log);
-                    //                    }
-                    //                    catch (RequestFailedException e)
-                    //                    {
-                    //                        log.LogError($"Error while updating Twin Property :  {e.Status}");
-                    //                    }
-                    //                }
-                    //            }
-                    //        }
-                    //    }
-                    //}
                 }
             }
-        }
-
-        private static async Task<string> FindParentAsync(DigitalTwinsClient client, string child, string relname, ILogger log)
-        {
-            // Find parent using incoming relationships
-            try
-            {
-                AsyncPageable<IncomingRelationship> rels = client.GetIncomingRelationshipsAsync(child);
-
-                await foreach (IncomingRelationship ie in rels)
-                {
-                    if (ie.RelationshipName == relname)
-                        return (ie.SourceId);
-                }
-            }
-            catch (RequestFailedException e)
-            {
-                log.LogError($"Error FindParentAsync() :{e.Status}:{e.Message}");
-            }
-            return null;
         }
 
         public static async Task UpdateTwinPropertyAsync(DigitalTwinsClient client, string twinId, string propertyPath, object value, bool bPatch, ILogger log)
