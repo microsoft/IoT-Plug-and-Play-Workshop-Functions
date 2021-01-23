@@ -151,12 +151,12 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                                     (operation["path"].ToString() == "/light"))
                                 {
                                     string opValue = operation["op"].ToString();
-                                    log.LogInformation($"Found {operation["path"].ToString()} : {operation["op"].ToString()}");
+                                    log.LogInformation($"Found {operation["path"].ToString()[1]} : {operation["op"].ToString()}");
 
                                     if (opValue.Equals("replace") || opValue.Equals("add"))
                                     {   //Update the maps feature stateset
                                         var postcontent = new JObject(new JProperty("States", new JArray(
-                                            new JObject(new JProperty("keyName", operation["path"].ToString()),
+                                            new JObject(new JProperty("keyName", operation["path"].ToString()[1]),
                                                  new JProperty("value", operation["value"].ToString()),
                                                  new JProperty("eventTimestamp", DateTime.Now.ToString("s"))))));
 
