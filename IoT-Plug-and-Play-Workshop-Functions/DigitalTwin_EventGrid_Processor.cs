@@ -65,63 +65,56 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                         {
                             try
                             {
-                                // Query digital twin
-                                var query = $"SELECT* FROM digitaltwins Device WHERE Device.$dtId = '{twinId}'";
-                                AsyncPageable<BasicDigitalTwin> asyncPageableResponse = _adtClient.QueryAsync<BasicDigitalTwin>(query);
+                                Response<BasicDigitalTwin> roomTwin = await _adtClient.GetDigitalTwinAsync<BasicDigitalTwin>(ie.SourceId);
 
-                                await foreach (BasicDigitalTwin twin in asyncPageableResponse)
+                                if (roomTwin != null)
                                 {
-                                    log.LogInformation($"Found Twin {twin.Id}");
+                                    log.LogInformation($"Found Room Twin {roomTwin.Value.Id}");
 
-                                    if (twin.Id == twinId)
+                                    if (roomTwin.Value.Contents.ContainsKey("unitId"))
                                     {
-                                        if (twin.Contents.ContainsKey("unitId"))
+                                        unitId = roomTwin.Value.Contents["unitId"].ToString();
+                                        log.LogInformation($"Found Unit ID {unitId}");
+                                    }
+                                    else
+                                    {
+                                        string roomNumber = string.Empty;
+                                        log.LogInformation($"Unit ID not found for {twinId}");
+
+                                        if (roomTwin.Value.Contents.ContainsKey("roomNumber"))
                                         {
-                                            unitId = twin.Contents["unitId"].ToString();
-                                            log.LogInformation($"Found Unit ID {unitId}");
+                                            roomNumber = roomTwin.Value.Contents["roomNumber"].ToString();
                                         }
                                         else
                                         {
-                                            string roomNumber = string.Empty;
-                                            log.LogInformation($"Unit ID not found for {twinId}");
-
-                                            if (twin.Contents.ContainsKey("roomNumber"))
+                                            foreach (var operation in message["data"]["patch"])
                                             {
-                                                roomNumber = twin.Contents["roomNumber"].ToString();
-                                            }
-                                            else
-                                            {
-                                                foreach (var operation in message["data"]["patch"])
+                                                if (operation["op"].ToString() == "add" && operation["path"].ToString() == "/roomNumber")
                                                 {
-                                                    if (operation["op"].ToString() == "add" && operation["path"].ToString() == "/roomNumber")
-                                                    {
-                                                        roomNumber = operation["value"].ToString();
-                                                        break;
-                                                    }
-                                                }
-                                            }
-
-                                            if (!string.IsNullOrEmpty(roomNumber))
-                                            {
-                                                log.LogInformation($"Getting Unit ID from Azure Map for {roomNumber}");
-                                                unitId = await getUnitId(roomNumber, log);
-                                                log.LogInformation($"Got Unit ID from Azure Map {unitId}");
-                                                if (!string.IsNullOrEmpty(unitId))
-                                                {
-                                                    log.LogInformation("Caching Unit ID data");
-                                                    // Cache unit ID
-                                                    unit = new MapUnit();
-                                                    unit.twinId = twinId;
-                                                    unit.unitId = unitId;
-                                                    UnitList.Add(unit);
-
-                                                    // Update Room Twin so we don't have to query Azure Map.
-                                                    await UpdateTwinPropertyAsync(_adtClient, twinId, "/unitId", unitId, false, log);
+                                                    roomNumber = operation["value"].ToString();
+                                                    break;
                                                 }
                                             }
                                         }
 
-                                        break;
+                                        if (!string.IsNullOrEmpty(roomNumber))
+                                        {
+                                            log.LogInformation($"Getting Unit ID from Azure Map for {roomNumber}");
+                                            unitId = await getUnitId(roomNumber, log);
+                                            log.LogInformation($"Got Unit ID from Azure Map {unitId}");
+                                            if (!string.IsNullOrEmpty(unitId))
+                                            {
+                                                log.LogInformation("Caching Unit ID data");
+                                                // Cache unit ID
+                                                unit = new MapUnit();
+                                                unit.twinId = twinId;
+                                                unit.unitId = unitId;
+                                                UnitList.Add(unit);
+
+                                                // Update Room Twin so we don't have to query Azure Map.
+                                                await UpdateTwinPropertyAsync(_adtClient, twinId, "/unitId", unitId, false, log);
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -144,11 +137,11 @@ namespace IoT_Plug_and_Play_Workshop_Functions
 
                             foreach (var operation in message["data"]["patch"])
                             {
-
-                                if (operation["path"].ToString() == "/Temperature")
+                                if ((operation["path"].ToString() == "/temperature") ||
+                                    (operation["path"].ToString() == "/light"))
                                 {
                                     string opValue = operation["op"].ToString();
-                                    log.LogInformation($"Found Temperature {operation["op"].ToString()}");
+                                    log.LogInformation($"Found {operation["path"].ToString()} : {operation["op"].ToString()}");
 
                                     if (opValue.Equals("replace") || opValue.Equals("add"))
                                     {   //Update the maps feature stateset
@@ -169,38 +162,38 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                             }
                         }
                     }
-                    else
-                    {
-                        // Find and update parent Twin
-                        string parentId = await FindParentAsync(_adtClient, twinId, "contains", log);
+                    //else
+                    //{
+                    //    //Find and update parent Twin
+                    //    string parentId = await FindParentAsync(_adtClient, twinId, "contains", log);
 
-                        if (parentId != null)
-                        {
-                            // log.LogInformation($"Found Parent : Twin Id {parentId}");
-                            // Read properties which values have been changed in each operation
-                            foreach (var operation in message["data"]["patch"])
-                            {
-                                string opValue = (string)operation["op"];
+                    //    if (parentId != null)
+                    //    {
+                    //        log.LogInformation($"Found Parent : Twin Id {parentId}");
+                    //        Read properties which values have been changed in each operation
+                    //        foreach (var operation in message["data"]["patch"])
+                    //        {
+                    //            string opValue = (string)operation["op"];
 
-                                if (opValue.Equals("replace"))
-                                {
-                                    string propertyPath = ((string)operation["path"]);
+                    //            if (opValue.Equals("replace"))
+                    //            {
+                    //                string propertyPath = ((string)operation["path"]);
 
-                                    if (propertyPath.Equals("/Temperature"))
-                                    {
-                                        try
-                                        {
-                                            await UpdateTwinPropertyAsync(_adtClient, parentId, propertyPath, operation["value"].Value<float>(), true, log);
-                                        }
-                                        catch (RequestFailedException e)
-                                        {
-                                            log.LogError($"Error while updating Twin Property :  {e.Status}");
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
+                    //                if (propertyPath.Equals("/Temperature"))
+                    //                {
+                    //                    try
+                    //                    {
+                    //                        await UpdateTwinPropertyAsync(_adtClient, parentId, propertyPath, operation["value"].Value<float>(), true, log);
+                    //                    }
+                    //                    catch (RequestFailedException e)
+                    //                    {
+                    //                        log.LogError($"Error while updating Twin Property :  {e.Status}");
+                    //                    }
+                    //                }
+                    //            }
+                    //        }
+                    //    }
+                    //}
                 }
             }
         }
