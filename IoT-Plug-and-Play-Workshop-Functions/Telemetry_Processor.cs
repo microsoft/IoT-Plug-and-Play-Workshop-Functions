@@ -358,7 +358,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                     }
                 }
                 else
-                        {
+                {
                     foreach (var supplementalType in telemetryInfo.SupplementalTypes)
                     {
                         if ((supplementalType.Versionless.Equals("dtmi:standard:class:Temperature")) ||
