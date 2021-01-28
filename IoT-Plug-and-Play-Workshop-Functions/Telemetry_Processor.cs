@@ -349,8 +349,16 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                         bFoundData = true;
                     }
                 }
-                else
+                else if ((telemetryInfo.SupplementalTypes.Count == 0) && model_id.StartsWith("dtmi:seeedkk:wioterminal:wioterminal_co2checker"))
                 {
+                    if (telemetryInfo.Name.Equals("co2"))
+                    {
+                        semanticType = "";
+                        bFoundData = true;
+                    }
+                }
+                else
+                        {
                     foreach (var supplementalType in telemetryInfo.SupplementalTypes)
                     {
                         if ((supplementalType.Versionless.Equals("dtmi:standard:class:Temperature")) ||
