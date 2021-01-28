@@ -1,6 +1,5 @@
 using System;
 using Microsoft.Azure.WebJobs;
-using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Azure.EventGrid.Models;
 using Microsoft.Azure.WebJobs.Extensions.EventGrid;
 using Microsoft.Extensions.Logging;
@@ -56,8 +55,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                     log.LogInformation($"Received {eventGridEvent.EventType} from {twinId} : {message["data"]}");
 
                     // Process Digital Twin Update Event for the room model
-                    if ((message["data"]["modelId"].ToString() == "dtmi:com:example:Room;1") ||
-                        (message["data"]["modelId"].ToString() == "dtmi:com:example:Room;2"))
+                    if ((message["data"]["modelId"].ToString().StartsWith("dtmi:com:example:Room")))
                     {
                         // Find Unit ID from cached list
                         MapUnit unit = UnitList.Find(x => x.twinId == twinId);
@@ -158,7 +156,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                                     if (opValue.Equals("replace") || opValue.Equals("add"))
                                     {   //Update the maps feature stateset
                                         var postcontent = new JObject(new JProperty("States", new JArray(
-                                            new JObject(new JProperty("keyName", operation["path"].ToString().Replace("/","")),
+                                            new JObject(new JProperty("keyName", operation["path"].ToString().Replace("/", "")),
                                                  new JProperty("value", operation["value"].ToString()),
                                                  new JProperty("eventTimestamp", DateTime.Now.ToString("s"))))));
 
@@ -188,7 +186,8 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                 if (bPatch)
                 {
                     updateTwinData.AppendReplace(propertyPath, value);
-                } else
+                }
+                else
                 {
                     updateTwinData.AppendAdd(propertyPath, value);
                 }
@@ -240,8 +239,8 @@ namespace IoT_Plug_and_Play_Workshop_Functions
 
         public class MapUnit
         {
-            public string twinId {get;set;}
-            public string unitId {get;set;}
+            public string twinId { get; set; }
+            public string unitId { get; set; }
         }
         public class FeatureCollection
         {
