@@ -15,7 +15,6 @@ using Azure;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using System.Net;
-using Newtonsoft.Json.Linq;
 
 namespace IoT_Plug_and_Play_Workshop_Functions
 {

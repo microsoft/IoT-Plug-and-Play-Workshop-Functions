@@ -1,22 +1,21 @@
-using IoTHubTrigger = Microsoft.Azure.WebJobs.EventHubTriggerAttribute;
 using System;
-using System.Text;
 using System.Collections.Generic;
-using System.Threading.Tasks;
 using System.Linq;
-using Microsoft.Azure.WebJobs;
-using Microsoft.Azure.EventHubs;
-using Microsoft.Extensions.Logging;
-using Microsoft.Azure.WebJobs.Extensions.SignalRService;
-using Newtonsoft.Json;
-using System.Net.Http;
-using Azure.Identity;
-using Azure.DigitalTwins.Core;
-using Azure.Core.Pipeline;
 using System.Net;
+using System.Net.Http;
+using System.Text;
 using System.Text.RegularExpressions;
-using Microsoft.Azure.DigitalTwins.Parser;
+using System.Threading.Tasks;
 using Azure;
+using Azure.Core.Pipeline;
+using Azure.DigitalTwins.Core;
+using Azure.Identity;
+using Microsoft.Azure.DigitalTwins.Parser;
+using Microsoft.Azure.EventHubs;
+using Microsoft.Azure.WebJobs;
+using Microsoft.Azure.WebJobs.Extensions.SignalRService;
+using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
 namespace IoT_Plug_and_Play_Workshop_Functions
@@ -24,7 +23,6 @@ namespace IoT_Plug_and_Play_Workshop_Functions
     public static class Telemetry_Processor
     {
         private const string _signalr_Hub = "telemetryhub";
-        private const string _consumer_Group = "telemetry-cg";
         private static readonly string _adtHostUrl = Environment.GetEnvironmentVariable("ADT_HOST_URL");
         private static readonly string _modelRepoUrl = Environment.GetEnvironmentVariable("ModelRepository");
         private static readonly string _gitToken = Environment.GetEnvironmentVariable("GitToken");
@@ -211,7 +209,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
 
             if (bFoundTwin)
             {
-                BasicDigitalTwin parentTwin= await FindParentAsync(_adtClient, deviceId, "contains", log);
+                BasicDigitalTwin parentTwin = await FindParentAsync(_adtClient, deviceId, "contains", log);
 
                 if (parentTwin == null)
                 {
@@ -266,8 +264,9 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                             var twinPatchData = new JsonPatchDocument();
                             if (parentTwin.Contents.ContainsKey(telemetry.name))
                             {
-                                twinPatchData.AppendReplace($"/{telemetry.name}", (telemetry.dataKind == DTEntityKind.Integer)? telemetry.dataInteger:telemetry.dataDouble);
-                            } else
+                                twinPatchData.AppendReplace($"/{telemetry.name}", (telemetry.dataKind == DTEntityKind.Integer) ? telemetry.dataInteger : telemetry.dataDouble);
+                            }
+                            else
                             {
                                 twinPatchData.AppendAdd($"/{telemetry.name}", (telemetry.dataKind == DTEntityKind.Integer) ? telemetry.dataInteger : telemetry.dataDouble);
                             }
@@ -281,31 +280,9 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                         }
                     }
                 }
-                //if (bUpdateADT)
-                //{
-                //    try
-                //    {
-                //        log.LogInformation($"ADT service client connection created.");
-                //        var twinPatchData = new JsonPatchDocument();
-                //        if (bPatch)
-                //        {
-                //            twinPatchData.AppendReplace("/Temperature", temperature);
-                //        }
-                //        else
-                //        {
-                //            twinPatchData.AppendAdd("/Temperature", temperature);
-                //        }
-                //        var updateResponse = await _adtClient.UpdateDigitalTwinAsync(deviceId, twinPatchData);
-                //        log.LogInformation($"ADT Response : {updateResponse.Status}");
-                //    }
-                //    catch (RequestFailedException e)
-                //    {
-                //        log.LogError($"Error UpdateDigitalTwinAsync():{e.Status}/{e.ErrorCode} : {e.Message}");
-                //    }
-                //}
             }
-
         }
+
         // Process Device Twin Change Event
         // Add filtering etc as needed
         // leave signalrData.data to null if we do not want to send SignalR message
@@ -413,8 +390,9 @@ namespace IoT_Plug_and_Play_Workshop_Functions
             {
                 log.LogError($"Error FindParentAsync() :{e.Status}:{e.Message}");
             }
-            return (twin != null) ? twin.Value : null ;
+            return (twin != null) ? twin.Value : null;
         }
+
         private static async Task<string> Resolve(string dtmi)
         {
             if (string.IsNullOrEmpty(dtmi))
@@ -517,6 +495,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
             public double dataInteger { get; set; }
             public string name { get; set; }
         }
+
         public class NOTIFICATION_DATA
         {
             public string eventId { get; set; }
