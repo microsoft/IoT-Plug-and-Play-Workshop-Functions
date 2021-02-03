@@ -338,8 +338,9 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                 {
                     foreach (var supplementalType in telemetryInfo.SupplementalTypes)
                     {
-                        if ((supplementalType.Versionless.Equals("dtmi:standard:class:Temperature")) ||
-                            (supplementalType.Versionless.Equals("dtmi:standard:class:Illuminance")))
+                        if ((supplementalType.Versionless.Equals("dtmi:standard:class:Temperature")))
+                            //if ((supplementalType.Versionless.Equals("dtmi:standard:class:Temperature")) ||
+                            //(supplementalType.Versionless.Equals("dtmi:standard:class:Illuminance")))
                         {
                             bFoundData = true;
                             semanticType = supplementalType.Versionless;
