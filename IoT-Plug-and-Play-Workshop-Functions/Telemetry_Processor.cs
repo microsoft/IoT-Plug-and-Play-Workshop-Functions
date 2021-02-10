@@ -196,10 +196,10 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                         ProcessInterface(signalrData, parsedModel, entry.Schema.EntityKind, entry.Name, entry.Id, jsonData);
                     }
                     break;
-                case DTEntityKind.String:
-                    JObject signalRData = JObject.Parse(signalrData.data);
 
-                    //signalrData[]
+                case DTEntityKind.String:
+                case DTEntityKind.Integer:
+                case DTEntityKind.Float:
                     break;
                 default:
                     _logger.LogInformation($"Unsupported DTEntry Kind {entryKind.ToString()}");
@@ -225,17 +225,20 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                         {
                             ProcessInterface(signalrData, parsedModel, DTEntityKind.Field, field.Name, field.Id, jsonData);
                         }
-
                         break;
+
                     case DTEntityKind.Enum:
                         _logger.LogInformation($"Enum");
                         var enumEntry = model[0].Schema as DTEnumInfo;
                         JObject signalRData = JObject.Parse(signalrData.data);
                         var value = signalRData[keyName].ToObject<int>();
-                        signalRData[keyName] = enumEntry.EnumValues[value].DisplayName["en"];
-                        signalrData.data = signalRData.ToString(Formatting.None);
-
+                        if (enumEntry.EnumValues.Count < value)
+                        {
+                            signalRData[keyName] = enumEntry.EnumValues[value].DisplayName["en"];
+                            signalrData.data = signalRData.ToString(Formatting.None);
+                        }
                         break;
+
                     case DTEntityKind.String:
                     case DTEntityKind.Integer:
                     case DTEntityKind.Float:
@@ -276,9 +279,9 @@ namespace IoT_Plug_and_Play_Workshop_Functions
 
             if (parsedModel != null)
             {
-                JObject signalRData = JObject.Parse(signalrData.data);
+                JObject jobjSignalR = JObject.Parse(signalrData.data);
 
-                foreach (KeyValuePair<string, JToken> property in signalRData)
+                foreach (KeyValuePair<string, JToken> property in jobjSignalR)
                 {
                     ProcessTelemetryEntry(signalrData, parsedModel, property.Key, property.Value);
                 }
