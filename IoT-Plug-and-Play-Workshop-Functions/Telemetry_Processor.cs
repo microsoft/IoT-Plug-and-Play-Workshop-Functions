@@ -575,6 +575,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
             }
             return jsonModel;
         }
+
         public async Task<IReadOnlyDictionary<Dtmi, DTEntityInfo>> ParseModelAsync(string dtmi)
         {
             string modelContent = string.Empty;
