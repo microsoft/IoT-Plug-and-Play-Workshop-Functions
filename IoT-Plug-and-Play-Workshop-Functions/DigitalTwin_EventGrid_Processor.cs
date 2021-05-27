@@ -163,7 +163,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                                         log.LogInformation($"Updating Map Unit {featureId} {operation["path"].ToString()} to {operation["value"].ToString()}");
 
                                         var response = await _httpClient.PostAsync(
-                                            $"https://atlas.microsoft.com/featureState/state?api-version=1.0&statesetID={_mapStatesetId}&featureID={featureId}&subscription-key={_mapKey}",
+                                            $"https://us.atlas.microsoft.com/featureState/state?api-version=1.0&statesetID={_mapStatesetId}&featureID={featureId}&subscription-key={_mapKey}",
                                             new StringContent(postcontent.ToString()));
 
                                         log.LogInformation(await response.Content.ReadAsStringAsync());
