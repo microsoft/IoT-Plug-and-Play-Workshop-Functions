@@ -282,6 +282,83 @@ namespace IoT_Plug_and_Play_Workshop_Functions
             return null;
         }
 
+        /// <summary>
+        /// Find Digital Twin in ADT
+        /// </summary>
+        /// <param name="dtClient"></param>
+        /// <param name="dtmi"></param>
+        /// <param name="deviceId"></param>
+        /// <param name="log"></param>
+        /// <returns></returns>
+        private static async Task<bool>FindTwinFromDeviceId(DigitalTwinsClient dtClient, string dtmi, string deviceId, ILogger log)
+        {
+            bool bFound = false;
+            try
+            {
+
+                string query = $"SELECT * FROM DigitalTwins T WHERE $dtId = '{deviceId}' AND IS_OF_MODEL('{dtmi}')";
+                AsyncPageable<BasicDigitalTwin> asyncPageableResponse = dtClient.QueryAsync<BasicDigitalTwin>(query);
+
+                await foreach (BasicDigitalTwin twin in asyncPageableResponse)
+                {
+                    // Get DT ID from the Twin
+                    log.LogInformation($"Twin '{twin.Id}' with Registration ID '{deviceId}' found in DT");
+                    bFound = true;
+                    break;
+                }
+
+                if (bFound == false)
+                {
+                    log.LogInformation($"Twin '{deviceId}' not found");
+                }
+            }
+            catch (RequestFailedException rex)
+            {
+                log.LogError($"GetModelAsync: {rex.Status}:{rex.Message}");
+            }
+
+            return bFound;
+        }
+
+        /// <summary>
+        /// Find Digital Twin Model in ADT
+        /// </summary>
+        /// <param name="dtClient"></param>
+        /// <param name="dtmi"></param>
+        /// <param name="deviceId"></param>
+        /// <param name="log"></param>
+        /// <returns></returns>
+        private static async Task<bool> FindTwinModel(DigitalTwinsClient dtClient, string dtmi, ILogger log)
+        {
+            bool bFound = false;
+            try
+            {
+
+                AsyncPageable<DigitalTwinsModelData> dtModels = dtClient.GetModelsAsync();
+                await foreach (DigitalTwinsModelData dtModel in dtModels)
+                {
+
+                    if (dtModel.Id.Equals(dtmi))
+                    {
+                        log.LogInformation($"Found model ID : {dtmi}");
+                        bFound = true;
+                        break;
+                    }
+                }
+
+                if (bFound == false)
+                {
+                    log.LogInformation($"Twin Model '{dtmi}' not found");
+                }
+            }
+            catch (RequestFailedException rex)
+            {
+                log.LogError($"GetModelAsync: {rex.Status}:{rex.Message}");
+            }
+
+            return bFound;
+        }
+
         private static async Task<bool> CreateTwinInAdt(string dtmi, string regId, ILogger log)
         {
             if (string.IsNullOrEmpty(dtmi) || string.IsNullOrEmpty(regId))
@@ -317,31 +394,13 @@ namespace IoT_Plug_and_Play_Workshop_Functions
 
                 try
                 {
-
-                    string query = $"SELECT * FROM DigitalTwins T WHERE $dtId = '{regId}' AND IS_OF_MODEL('{dtmi}')";
-                    AsyncPageable<BasicDigitalTwin> asyncPageableResponse = _adtClient.QueryAsync<BasicDigitalTwin>(query);
-
-                    await foreach (BasicDigitalTwin twin in asyncPageableResponse)
-                    {
-                        // Get DT ID from the Twin
-                        log.LogInformation($"Twin '{twin.Id}' with Registration ID '{regId}' found in DT");
-                        bFoundTwin = true;
-                    }
+                    bFoundTwin = await FindTwinFromDeviceId(_adtClient, dtmi, regId, log);
 
                     if (bFoundTwin == false)
                     {
                         log.LogInformation($"Twin '{regId}' not found");
 
-                        AsyncPageable<DigitalTwinsModelData> allModels = _adtClient.GetModelsAsync();
-                        await foreach (DigitalTwinsModelData model in allModels)
-                        {
-                            if (model.Id.Equals(dtmi))
-                            {
-                                log.LogInformation($"Found model ID : {dtmi}");
-                                bFoundModel = true;
-                                break;
-                            }
-                        }
+                        bFoundModel = await FindTwinModel(_adtClient, dtmi, log);
 
                         if (bFoundModel == false)
                         {
