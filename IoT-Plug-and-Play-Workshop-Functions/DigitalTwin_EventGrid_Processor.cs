@@ -1,6 +1,5 @@
 using System;
 using Microsoft.Azure.WebJobs;
-using Microsoft.Azure.EventGrid.Models;
 using Microsoft.Azure.WebJobs.Extensions.EventGrid;
 using Microsoft.Extensions.Logging;
 using Azure.DigitalTwins.Core;
@@ -13,6 +12,7 @@ using Azure;
 using Azure.Core.Pipeline;
 using System.Net;
 using System.Collections.Generic;
+using Microsoft.Azure.EventGrid.Models;
 
 namespace IoT_Plug_and_Play_Workshop_Functions
 {

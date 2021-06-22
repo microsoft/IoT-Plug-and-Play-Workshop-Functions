@@ -5,14 +5,14 @@
     <RootNamespace>IoT_Plug_and_Play_Workshop_Functions</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Azure.DigitalTwins.Core" Version="1.2.0" />
-    <PackageReference Include="Azure.Identity" Version="1.3.0" />
-    <PackageReference Include="Microsoft.Azure.Devices.Provisioning.Service" Version="1.17.0-preview-001" />
-    <PackageReference Include="Microsoft.Azure.DigitalTwins.Parser" Version="3.12.5" />
+    <PackageReference Include="Azure.DigitalTwins.Core" Version="1.2.2" />
+    <PackageReference Include="Azure.Identity" Version="1.5.0-beta.1" />
+    <PackageReference Include="Microsoft.Azure.Devices.Provisioning.Service" Version="1.18.0-preview-001" />
+    <PackageReference Include="Microsoft.Azure.DigitalTwins.Parser" Version="4.0.8-preview" />
     <PackageReference Include="Microsoft.Azure.WebJobs.Extensions.EventGrid" Version="2.1.0" />
-    <PackageReference Include="Microsoft.Azure.WebJobs.Extensions.EventHubs" Version="4.1.1" />
-    <PackageReference Include="Microsoft.Azure.WebJobs.Extensions.SignalRService" Version="1.2.2" />
-    <PackageReference Include="Microsoft.NET.Sdk.Functions" Version="3.0.11" />  </ItemGroup>
+    <PackageReference Include="Microsoft.Azure.WebJobs.Extensions.EventHubs" Version="4.2.0" />
+    <PackageReference Include="Microsoft.Azure.WebJobs.Extensions.SignalRService" Version="1.4.2" />
+    <PackageReference Include="Microsoft.NET.Sdk.Functions" Version="3.0.13" />  </ItemGroup>
   <ItemGroup>
     <None Update="host.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

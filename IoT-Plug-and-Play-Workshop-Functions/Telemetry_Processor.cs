@@ -1,11 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net;
 using System.Net.Http;
-using System.Net.Http.Headers;
 using System.Text;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Azure;
 using Azure.Core.Pipeline;
@@ -28,7 +25,6 @@ namespace IoT_Plug_and_Play_Workshop_Functions
         private static readonly string _modelRepoUrl = Environment.GetEnvironmentVariable("ModelRepository");
         private static readonly string _gitToken = Environment.GetEnvironmentVariable("GitToken");
         private static readonly HttpClient _httpClient = new HttpClient();
-        private static readonly WebClient _webClient = new WebClient();
         private static DigitalTwinsClient _adtClient = null;
         private static ILogger _logger = null;
         private static DeviceModelResolver _resolver = null;
@@ -39,8 +35,8 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                                      ILogger logger)
         {
             var exceptions = new List<Exception>();
-
             _logger = logger;
+
             foreach (EventData ed in eventData)
             {
                 try
@@ -158,96 +154,6 @@ namespace IoT_Plug_and_Play_Workshop_Functions
         {
             _logger.LogInformation($"OnDeviceLifecycleChanged");
             signalrData.data = JsonConvert.SerializeObject(eventData.Properties);
-        }
-
-        private static async Task<IReadOnlyDictionary<Dtmi, DTEntityInfo>> DeviceModelResolveAndParse(string dtmi)
-        {
-            if (!string.IsNullOrEmpty(dtmi))
-            {
-                try
-                {
-                    if (_resolver == null)
-                    {
-                        _resolver = new DeviceModelResolver(_modelRepoUrl, _gitToken, _logger);
-                    }
-
-                    // resolve and parse device model
-                    return await _resolver.ParseModelAsync(dtmi);
-
-                }
-                catch (Exception e)
-                {
-                    _logger.LogError($"Error Resolve(): {e.Message}");
-                }
-            }
-
-            return null;
-        }
-        private static void ProcessInterface(SIGNALR_DATA signalrData, IReadOnlyDictionary<Dtmi, DTEntityInfo> parsedModel, DTEntityKind entryKind, string keyName, Dtmi keyId, JToken jsonData)
-        {
-            _logger.LogInformation($"Key ID {keyId} kind {entryKind.ToString()} Value {jsonData}");
-
-            switch (entryKind)
-            {
-                case DTEntityKind.Field:
-                    var entries = parsedModel.Where(r => r.Value.EntityKind == entryKind).Select(x => x.Value as DTFieldInfo).Where(x => x.Id == keyId).ToList();
-                    foreach (var entry in entries)
-                    {
-                        ProcessInterface(signalrData, parsedModel, entry.Schema.EntityKind, entry.Name, entry.Id, jsonData);
-                    }
-                    break;
-
-                case DTEntityKind.String:
-                case DTEntityKind.Integer:
-                case DTEntityKind.Float:
-                    break;
-                default:
-                    _logger.LogInformation($"Unsupported DTEntry Kind {entryKind.ToString()}");
-                    break;
-            }
-
-        }
-        private static void ProcessTelemetryEntry(SIGNALR_DATA signalrData, IReadOnlyDictionary<Dtmi, DTEntityInfo> parsedModel, string keyName, JToken jsonData)
-        {
-            var model = parsedModel.Where(r => r.Value.EntityKind == DTEntityKind.Telemetry).Select(x => x.Value as DTTelemetryInfo).Where(x => x.Name == keyName).ToList();
-
-            if (model.Count == 1)
-            {
-                _logger.LogInformation($"Key {keyName} Value {jsonData}");
-
-                switch (model[0].Schema.EntityKind)
-                {
-                    case DTEntityKind.Object:
-                        _logger.LogInformation($"Object");
-
-                        var objectFields = model[0].Schema as DTObjectInfo;
-                        foreach (var field in objectFields.Fields)
-                        {
-                            ProcessInterface(signalrData, parsedModel, DTEntityKind.Field, field.Name, field.Id, jsonData);
-                        }
-                        break;
-
-                    case DTEntityKind.Enum:
-                        _logger.LogInformation($"Enum");
-                        var enumEntry = model[0].Schema as DTEnumInfo;
-                        JObject signalRData = JObject.Parse(signalrData.data);
-                        var value = signalRData[keyName].ToObject<int>();
-                        if (enumEntry.EnumValues.Count < value)
-                        {
-                            signalRData[keyName] = enumEntry.EnumValues[value].DisplayName["en"];
-                            signalrData.data = signalRData.ToString(Formatting.None);
-                        }
-                        break;
-
-                    case DTEntityKind.String:
-                    case DTEntityKind.Integer:
-                    case DTEntityKind.Float:
-                        break;
-                    default:
-                        _logger.LogInformation($"Unsupported DTEntry King {model[0].Schema.EntityKind.ToString()}");
-                        break;
-                }
-            }
         }
 
         // Process Telemetry
@@ -405,6 +311,96 @@ namespace IoT_Plug_and_Play_Workshop_Functions
             }
         }
 
+        private static async Task<IReadOnlyDictionary<Dtmi, DTEntityInfo>> DeviceModelResolveAndParse(string dtmi)
+        {
+            if (!string.IsNullOrEmpty(dtmi))
+            {
+                try
+                {
+                    if (_resolver == null)
+                    {
+                        _resolver = new DeviceModelResolver(_modelRepoUrl, _gitToken, _logger);
+                    }
+
+                    // resolve and parse device model
+                    return await _resolver.ParseModelAsync(dtmi);
+
+                }
+                catch (Exception e)
+                {
+                    _logger.LogError($"Error Resolve(): {e.Message}");
+                }
+            }
+
+            return null;
+        }
+        private static void ProcessInterface(SIGNALR_DATA signalrData, IReadOnlyDictionary<Dtmi, DTEntityInfo> parsedModel, DTEntityKind entryKind, string keyName, Dtmi keyId, JToken jsonData)
+        {
+            _logger.LogInformation($"Key ID {keyId} kind {entryKind.ToString()} Value {jsonData}");
+
+            switch (entryKind)
+            {
+                case DTEntityKind.Field:
+                    var entries = parsedModel.Where(r => r.Value.EntityKind == entryKind).Select(x => x.Value as DTFieldInfo).Where(x => x.Id == keyId).ToList();
+                    foreach (var entry in entries)
+                    {
+                        ProcessInterface(signalrData, parsedModel, entry.Schema.EntityKind, entry.Name, entry.Id, jsonData);
+                    }
+                    break;
+
+                case DTEntityKind.String:
+                case DTEntityKind.Integer:
+                case DTEntityKind.Float:
+                    break;
+                default:
+                    _logger.LogInformation($"Unsupported DTEntry Kind {entryKind.ToString()}");
+                    break;
+            }
+
+        }
+        private static void ProcessTelemetryEntry(SIGNALR_DATA signalrData, IReadOnlyDictionary<Dtmi, DTEntityInfo> parsedModel, string keyName, JToken jsonData)
+        {
+            var model = parsedModel.Where(r => r.Value.EntityKind == DTEntityKind.Telemetry).Select(x => x.Value as DTTelemetryInfo).Where(x => x.Name == keyName).ToList();
+
+            if (model.Count == 1)
+            {
+                _logger.LogInformation($"Key {keyName} Value {jsonData}");
+
+                switch (model[0].Schema.EntityKind)
+                {
+                    case DTEntityKind.Object:
+                        _logger.LogInformation($"Object");
+
+                        var objectFields = model[0].Schema as DTObjectInfo;
+                        foreach (var field in objectFields.Fields)
+                        {
+                            ProcessInterface(signalrData, parsedModel, DTEntityKind.Field, field.Name, field.Id, jsonData);
+                        }
+                        break;
+
+                    case DTEntityKind.Enum:
+                        _logger.LogInformation($"Enum");
+                        var enumEntry = model[0].Schema as DTEnumInfo;
+                        JObject signalRData = JObject.Parse(signalrData.data);
+                        var value = signalRData[keyName].ToObject<int>();
+                        if (enumEntry.EnumValues.Count < value)
+                        {
+                            signalRData[keyName] = enumEntry.EnumValues[value].DisplayName["en"];
+                            signalrData.data = signalRData.ToString(Formatting.None);
+                        }
+                        break;
+
+                    case DTEntityKind.String:
+                    case DTEntityKind.Integer:
+                    case DTEntityKind.Float:
+                        break;
+                    default:
+                        _logger.LogInformation($"Unsupported DTEntry King {model[0].Schema.EntityKind.ToString()}");
+                        break;
+                }
+            }
+        }
+
         private static TELEMETRY_DATA GetTelemetrydata(DTTelemetryInfo telemetryInfo, JObject signalRData, string model_id)
         {
             TELEMETRY_DATA data = null;
@@ -512,113 +508,4 @@ namespace IoT_Plug_and_Play_Workshop_Functions
         }
     }
 
-    #region ModelResolver
-    public class DeviceModelResolver
-    {
-        private const string _publicRepository = "https://devicemodels.azure.com";
-        private static string _privateRepository = string.Empty;
-        private static string _githubToken = string.Empty;
-        private static HttpClient _httpClient = new HttpClient();
-        private static ILogger _logger = null;
-
-        public DeviceModelResolver(ILogger logger)
-        {
-            _logger = logger;
-        }
-
-        public DeviceModelResolver(string repositoryUri)
-        {
-            _privateRepository = repositoryUri;
-        }
-
-        public DeviceModelResolver(string repositoryUri, string githubToken, ILogger logger)
-        {
-            _privateRepository = repositoryUri;
-            _githubToken = githubToken;
-            _logger = logger;
-        }
-        private bool IsValidDtmi(string dtmi)
-        {
-            // Regex defined at https://github.com/Azure/digital-twin-model-identifier#validation-regular-expressions
-            Regex rx = new Regex(@"^dtmi:[A-Za-z](?:[A-Za-z0-9_]*[A-Za-z0-9])?(?::[A-Za-z](?:[A-Za-z0-9_]*[A-Za-z0-9])?)*;[1-9][0-9]{0,8}$");
-            return rx.IsMatch(dtmi);
-        }
-
-        public string DtmiToPath(string dtmi)
-        {
-            if (IsValidDtmi(dtmi))
-            {
-                return $"/{dtmi.ToLowerInvariant().Replace(":", "/").Replace(";", "-")}.json";
-            }
-            return string.Empty;
-        }
-        public async Task<string> GetModelContentAsync(string dtmiPath)
-        {
-            return await this.GetModelContentAsync(dtmiPath, false);
-        }
-
-        public async Task<string> GetModelContentAsync(string dtmiPath, bool bPublicRepo)
-        {
-            var jsonModel = string.Empty;
-            try
-            {
-                var fullPath = new Uri($"{(bPublicRepo == true ? _publicRepository : _privateRepository)}{dtmiPath}");
-                if (!string.IsNullOrEmpty(_githubToken))
-                {
-                    _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Token", _githubToken);
-                }
-                jsonModel = await _httpClient.GetStringAsync(fullPath);
-            }
-            catch (Exception e)
-            {
-                _logger.LogError($"Error GetModelContentAsync(): {e.Message}");
-            }
-            return jsonModel;
-        }
-
-        public async Task<IReadOnlyDictionary<Dtmi, DTEntityInfo>> ParseModelAsync(string dtmi)
-        {
-            string modelContent = string.Empty;
-            IReadOnlyDictionary<Dtmi, DTEntityInfo> parseResult = null;
-            List<string> listModelJson = new List<string>();
-
-            string dtmiPath = DtmiToPath(dtmi);
-
-            if (!string.IsNullOrEmpty(dtmiPath))
-            {
-                modelContent = await GetModelContentAsync(dtmiPath, false);
-
-                if (string.IsNullOrEmpty(modelContent))
-                {
-                    // try public repo
-                    modelContent = await GetModelContentAsync(dtmiPath);
-                }
-
-                if (!string.IsNullOrEmpty(modelContent))
-                {
-                    listModelJson.Add(modelContent);
-                }
-
-                try
-                {
-                    ModelParser parser = new ModelParser();
-                    //parser.DtmiResolver = (IReadOnlyCollection<Dtmi> dtmis) =>
-                    //{
-                    //    foreach (Dtmi d in dtmis)
-                    //    {
-                    //        _logger.LogInformation($"-------------  {d}");
-                    //    }
-                    //    return null;
-                    //};
-                    parseResult = await parser.ParseAsync(listModelJson);
-                }
-                catch (Exception e)
-                {
-                    _logger.LogError($"Error ParseModelAsync(): {e.Message}");
-                }
-            }
-            return parseResult;
-        }
-    }
-    #endregion // resolver
 }
