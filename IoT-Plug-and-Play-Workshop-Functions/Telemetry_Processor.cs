@@ -22,8 +22,8 @@ namespace IoT_Plug_and_Play_Workshop_Functions
     {
         private const string _signalr_Hub = "telemetryhub";
         private static readonly string _adtHostUrl = Environment.GetEnvironmentVariable("ADT_HOST_URL");
-        private static readonly string _modelRepoUrl = Environment.GetEnvironmentVariable("ModelRepository");
-        private static readonly string _gitToken = Environment.GetEnvironmentVariable("GitToken");
+        private static readonly string _modelRepoUrl = Environment.GetEnvironmentVariable("PRIVATE_MODEL_REPOSIROTY_URL");
+        private static readonly string _gitToken = Environment.GetEnvironmentVariable("PRIVATE_MODEL_REPOSIROTY_TOKEN");
         private static readonly HttpClient _httpClient = new HttpClient();
         private static DigitalTwinsClient _adtClient = null;
         private static ILogger _logger = null;

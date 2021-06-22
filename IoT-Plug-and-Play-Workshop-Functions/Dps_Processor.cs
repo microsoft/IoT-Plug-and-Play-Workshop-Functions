@@ -22,18 +22,13 @@ namespace IoT_Plug_and_Play_Workshop_Functions
 {
     public static class Dps_Processor
     {
-
-        private static readonly string _gitToken = Environment.GetEnvironmentVariable("GitToken");
-        private static readonly string _modelRepoUrl_Private = Environment.GetEnvironmentVariable("ModelRepository");
+        private static readonly string _gitToken = Environment.GetEnvironmentVariable("PRIVATE_MODEL_REPOSIROTY_TOKEN");
+        private static readonly string _modelRepoUrl_Private = Environment.GetEnvironmentVariable("PRIVATE_MODEL_REPOSIROTY_URL");
         private static string _adtServiceUrl = Environment.GetEnvironmentVariable("ADT_HOST_URL");
         private static DigitalTwinsClient _adtClient = null;
-        private static ILogger _logger;
+        private static ILogger _logger = null;
         private static DeviceModelResolver _resolver = null;
         private static readonly HttpClient _httpClient = new HttpClient();
-
-        //private static readonly HttpClient _httpClient = new HttpClient();
-        //private static readonly WebClient _webClient = new WebClient();
-
 
         //
         // Sample code to perform custom actions during device provisioning.
@@ -53,7 +48,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
         [FunctionName("Dps_Processor")]
         public static async Task<IActionResult> Run(
             [HttpTrigger(AuthorizationLevel.Function, "get", "post", Route = null)] HttpRequest request,
-            ILogger log)
+            ILogger logger)
         {
             string requestBody = await new StreamReader(request.Body).ReadToEndAsync();
             string errorMessage = string.Empty;
@@ -61,24 +56,24 @@ namespace IoT_Plug_and_Play_Workshop_Functions
             string registrationId;
             DateTime localDate = DateTime.Now;
 
-            _logger = log;
+            _logger = logger;
 
             dynamic requestData = JsonConvert.DeserializeObject(requestBody);
 
             if (requestData.ContainsKey("enrollmentGroup"))
             {
-                log.LogInformation("Group Enrollment");
+                _logger.LogInformation("Group Enrollment");
                 registrationId = requestData?.enrollmentGroup?.enrollmentGroupId;
             }
             else
             {
-                log.LogInformation("Individual Enrollment");
+                _logger.LogInformation("Individual Enrollment");
                 registrationId = requestData?.deviceRuntimeContext?.registrationId;
             }
 
             string[] iothubs = requestData?.linkedHubs.ToObject<string[]>();
 
-            log.LogInformation($"dps_processor : Request.Body: {JsonConvert.SerializeObject(requestData, Formatting.Indented)}");
+            _logger.LogInformation($"dps_processor : Request.Body: {JsonConvert.SerializeObject(requestData, Formatting.Indented)}");
 
             #region payload_sample
             /* Payload Example
@@ -126,12 +121,12 @@ namespace IoT_Plug_and_Play_Workshop_Functions
             {
                 if (registrationId == null)
                 {
-                    log.LogError($"Missing Registration ID");
+                    _logger.LogError($"Missing Registration ID");
                 }
                 else if (iothubs == null)
                 {
                     errorMessage = "No linked hubs for this enrollment.";
-                    log.LogError("linked IoT Hub");
+                    _logger.LogError("linked IoT Hub");
                 }
                 else
                 {
@@ -175,7 +170,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                         // If DTMI is given to DPS payload, parse it.
                         parsedModel = await DeviceModelResolveAndParse(modelId);
 
-                        await ProcessDigitalTwin(modelId, registrationId, log);
+                        await ProcessDigitalTwin(modelId, registrationId);
                     }
 
                     //
@@ -197,7 +192,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                         {
                             // Give a host name based on timestamp
                             var dateString = $"{localDate.Year}{localDate.Month}{localDate.Day}-{localDate.Hour}{localDate.Minute}{localDate.Second}";
-                            log.LogInformation($"Found Writable Property '{propertyName}'");
+                            _logger.LogInformation($"Found Writable Property '{propertyName}'");
 
                             // If no match, this interface must be from Component
                             if (!modelId.Equals(property.DefinedIn.AbsoluteUri))
@@ -244,17 +239,17 @@ namespace IoT_Plug_and_Play_Workshop_Functions
             }
             catch (Exception ex)
             {
-                log.LogError($"Exception {ex}");
+                _logger.LogError($"Exception {ex}");
                 errorMessage = ex.Message;
             }
 
             if (!string.IsNullOrEmpty(errorMessage))
             {
-                log.LogError($"Error : {errorMessage}");
+                _logger.LogError($"Error : {errorMessage}");
                 return new BadRequestObjectResult(errorMessage);
             }
 
-            log.LogInformation($"Response to DPS \r\n {JsonConvert.SerializeObject(response)}");
+            _logger.LogInformation($"Response to DPS \r\n {JsonConvert.SerializeObject(response)}");
             return (ActionResult)new OkObjectResult(response);
         }
 
@@ -295,9 +290,9 @@ namespace IoT_Plug_and_Play_Workshop_Functions
         /// </summary>
         /// <param name="dtmi"></param>
         /// <param name="regId"></param>
-        /// <param name="log"></param>
+        /// <param name="_logger"></param>
         /// <returns></returns>
-        private static async Task<bool> ProcessDigitalTwin(string dtmi, string regId, ILogger log)
+        private static async Task<bool> ProcessDigitalTwin(string dtmi, string regId)
         {
             bool bFoundTwin = false;
 
@@ -318,11 +313,11 @@ namespace IoT_Plug_and_Play_Workshop_Functions
 
                     var credentials = new DefaultAzureCredential();
                     _adtClient = new DigitalTwinsClient(new Uri(_adtServiceUrl), credentials, new DigitalTwinsClientOptions { Transport = new HttpClientTransport(_httpClient) });
-                    log.LogInformation("ADT service client connection created.");
+                    _logger.LogInformation("ADT service client connection created.");
                 }
                 catch (Exception e)
                 {
-                    log.LogError($"ADT service client connection failed. {e}");
+                    _logger.LogError($"ADT service client connection failed. {e}");
                 }
             }
 
@@ -333,32 +328,32 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                 try
                 {
                     // Check to see a digital twin for this device exists or not
-                    bFoundTwin = await FindTwinFromDeviceId(_adtClient, dtmi, regId, log);
+                    bFoundTwin = await FindTwinFromDeviceId(_adtClient, dtmi, regId);
 
                     if (bFoundTwin == false)
                     {
-                        log.LogInformation($"Digital Twin '{regId}' not found");
+                        _logger.LogInformation($"Digital Twin '{regId}' not found");
 
                         // Check to see if a digital twin model for this DTMI exists or not
-                        bFoundModel = await FindTwinModel(_adtClient, dtmi, log);
+                        bFoundModel = await FindTwinModel(_adtClient, dtmi);
 
                         if (bFoundModel == false)
                         {
                             // Digital Twin model does not exist.  Create one.
-                            log.LogInformation($"Twin Model {dtmi} not found");
-                            bFoundModel = await CreateTwinModel(_adtClient, dtmi, log);
+                            _logger.LogInformation($"Twin Model {dtmi} not found");
+                            bFoundModel = await CreateTwinModel(_adtClient, dtmi);
                         }
 
                         if (bFoundModel == true)
                         {
                             // Digital Twin model already exists.  Create digital twin.
-                            bFoundTwin = await CreateDigitalTwin(_adtClient, dtmi, regId, log);
+                            bFoundTwin = await CreateDigitalTwin(_adtClient, dtmi, regId);
                         }
                     }
                 }
                 catch (RequestFailedException rex)
                 {
-                    log.LogError($"GetModelAsync: {rex.Status}:{rex.Message}");
+                    _logger.LogError($"GetModelAsync: {rex.Status}:{rex.Message}");
                 }
             }
 
@@ -378,19 +373,19 @@ namespace IoT_Plug_and_Play_Workshop_Functions
             //            await foreach (BasicDigitalTwin twin in asyncPageableResponse)
             //            {
             //                // Get DT ID from the Twin
-            //                log.LogInformation($"Twin '{twin.Id}' with Registration ID '{regId}' found in DT");
+            //                _logger.LogInformation($"Twin '{twin.Id}' with Registration ID '{regId}' found in DT");
             //                bFoundTwin = true;
             //            }
             //        }
             //        catch (RequestFailedException rex)
             //        {
-            //            log.LogError($"GetModelAsync: {rex.Status}:{rex.Message}");
+            //            _logger.LogError($"GetModelAsync: {rex.Status}:{rex.Message}");
             //            return false;
             //        }
 
             //        if (bFoundTwin)
             //        {
-            //            log.LogInformation($"Twin found. ID: {regId} (Model: {dtmi})");
+            //            _logger.LogInformation($"Twin found. ID: {regId} (Model: {dtmi})");
             //            return true;
             //        }
 
@@ -400,7 +395,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
 
             //            if (model.Id.Equals(dtmi))
             //            {
-            //                log.LogInformation($"Found model ID : {dtmi}");
+            //                _logger.LogInformation($"Found model ID : {dtmi}");
             //                bFoundModel = true;
             //                break;
             //            }
@@ -436,11 +431,11 @@ namespace IoT_Plug_and_Play_Workshop_Functions
             //        //    try
             //        //    {
             //        //        await _adtClient.CreateModelsAsync(modelList);
-            //        //        log.LogInformation($"Digital Twin Model {dtmi} created");
+            //        //        _logger.LogInformation($"Digital Twin Model {dtmi} created");
             //        //    }
             //        //    catch (RequestFailedException rex)
             //        //    {
-            //        //        log.LogError($"CreateModelsAsync: {rex.Status}:{rex.Message}");
+            //        //        _logger.LogError($"CreateModelsAsync: {rex.Status}:{rex.Message}");
             //        //        return false;
             //        //    }
             //        }
@@ -455,11 +450,11 @@ namespace IoT_Plug_and_Play_Workshop_Functions
             //            };
 
             //            Response<BasicDigitalTwin> response = await _adtClient.CreateOrReplaceDigitalTwinAsync(regId, twinData);
-            //            log.LogInformation($"Digital Twin {response.Value.Id} (Model : {response.Value.Metadata.ModelId}) created");
+            //            _logger.LogInformation($"Digital Twin {response.Value.Id} (Model : {response.Value.Metadata.ModelId}) created");
             //        }
             //        catch (RequestFailedException rex)
             //        {
-            //            log.LogError($"CreateOrReplaceDigitalTwinAsync: {rex.Status}:{rex.Message}");
+            //            _logger.LogError($"CreateOrReplaceDigitalTwinAsync: {rex.Status}:{rex.Message}");
             //            return false;
             //        }
 
@@ -473,7 +468,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
         /// <summary>
         /// Find Digital Twin in ADT
         /// </summary>
-        private static async Task<bool> FindTwinFromDeviceId(DigitalTwinsClient dtClient, string dtmi, string deviceId, ILogger log)
+        private static async Task<bool> FindTwinFromDeviceId(DigitalTwinsClient dtClient, string dtmi, string deviceId)
         {
             bool bFound = false;
             try
@@ -484,19 +479,19 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                 await foreach (BasicDigitalTwin twin in asyncPageableResponse)
                 {
                     // Get DT ID from the Twin
-                    log.LogInformation($"Twin '{twin.Id}' with Registration ID '{deviceId}' found in DT");
+                    _logger.LogInformation($"Twin '{twin.Id}' with Registration ID '{deviceId}' found in DT");
                     bFound = true;
                     break;
                 }
 
                 if (bFound == false)
                 {
-                    log.LogInformation($"Twin '{deviceId}' not found");
+                    _logger.LogInformation($"Twin '{deviceId}' not found");
                 }
             }
             catch (RequestFailedException rex)
             {
-                log.LogError($"GetModelAsync: {rex.Status}:{rex.Message}");
+                _logger.LogError($"GetModelAsync: {rex.Status}:{rex.Message}");
             }
 
             return bFound;
@@ -505,7 +500,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
         /// <summary>
         /// Find Digital Twin Model in ADT
         /// </summary>
-        private static async Task<bool> FindTwinModel(DigitalTwinsClient dtClient, string dtmi, ILogger log)
+        private static async Task<bool> FindTwinModel(DigitalTwinsClient dtClient, string dtmi)
         {
             bool bFound = false;
             try
@@ -517,7 +512,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
 
                     if (dtModel.Id.Equals(dtmi))
                     {
-                        log.LogInformation($"Found model ID : {dtmi}");
+                        _logger.LogInformation($"Found model ID : {dtmi}");
                         bFound = true;
                         break;
                     }
@@ -525,12 +520,12 @@ namespace IoT_Plug_and_Play_Workshop_Functions
 
                 if (bFound == false)
                 {
-                    log.LogInformation($"Twin Model '{dtmi}' not found");
+                    _logger.LogInformation($"Twin Model '{dtmi}' not found");
                 }
             }
             catch (RequestFailedException rex)
             {
-                log.LogError($"GetModelAsync: {rex.Status}:{rex.Message}");
+                _logger.LogError($"GetModelAsync: {rex.Status}:{rex.Message}");
             }
 
             return bFound;
@@ -539,7 +534,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
         /// <summary>
         /// Create digital twin model in Azure Digital Twins
         /// </summary>
-        private static async Task<bool> CreateTwinModel(DigitalTwinsClient dtClient, string dtmi, ILogger log)
+        private static async Task<bool> CreateTwinModel(DigitalTwinsClient dtClient, string dtmi)
         {
             bool bCreated = false;
             string dtmiPath = string.Empty;
@@ -583,18 +578,18 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                     
                     if (model != null && model.Value[0].Id.Equals(dtmi))
                     {
-                        log.LogInformation($"Digital Twin Model {dtmi} created");
+                        _logger.LogInformation($"Digital Twin Model {dtmi} created");
                         bCreated = true;
                     }
                 }
                 else
                 {
-                    log.LogWarning($"Device Model {dtmi} not found");
+                    _logger.LogWarning($"Device Model {dtmi} not found");
                 }
             }
             catch (RequestFailedException rex)
             {
-                log.LogError($"GetModelAsync: {rex.Status}:{rex.Message}");
+                _logger.LogError($"GetModelAsync: {rex.Status}:{rex.Message}");
             }
 
             return bCreated;
@@ -607,9 +602,9 @@ namespace IoT_Plug_and_Play_Workshop_Functions
         /// <param name=""></param>
         /// <param name="dtmi"></param>
         /// <param name="deviceId"></param>
-        /// <param name="log"></param>
+        /// <param name="_logger"></param>
         /// <returns></returns>
-        private static async Task<bool> CreateDigitalTwin(DigitalTwinsClient dtClient, string dtmi, string deviceId, ILogger log)
+        private static async Task<bool> CreateDigitalTwin(DigitalTwinsClient dtClient, string dtmi, string deviceId)
         {
             bool bCreated = false;
 
@@ -622,11 +617,11 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                 };
 
                 Response<BasicDigitalTwin> response = await _adtClient.CreateOrReplaceDigitalTwinAsync(deviceId, twinData);
-                log.LogInformation($"Digital Twin {response.Value.Id} (Model : {response.Value.Metadata.ModelId}) created");
+                _logger.LogInformation($"Digital Twin {response.Value.Id} (Model : {response.Value.Metadata.ModelId}) created");
             }
             catch (RequestFailedException rex)
             {
-                log.LogError($"CreateOrReplaceDigitalTwinAsync: {rex.Status}:{rex.Message}");
+                _logger.LogError($"CreateOrReplaceDigitalTwinAsync: {rex.Status}:{rex.Message}");
             }
 
             return bCreated;

@@ -21,8 +21,8 @@ namespace IoT_Plug_and_Play_Workshop_Functions
         private static readonly HttpClient _httpClient = new HttpClient();
         private static string _adtServiceUrl = Environment.GetEnvironmentVariable("ADT_HOST_URL");
         private static string _mapKey = Environment.GetEnvironmentVariable("MAP_KEY");
-        private static string _mapStatesetId = Environment.GetEnvironmentVariable("StatesetId");
-        private static string _mapDatasetId = Environment.GetEnvironmentVariable("DatasetId");
+        private static string _mapStatesetId = Environment.GetEnvironmentVariable("MAP_STATESET_ID");
+        private static string _mapDatasetId = Environment.GetEnvironmentVariable("MAP_DATASET_ID");
         private static DigitalTwinsClient _adtClient = null;
         private static List<MapUnit> UnitList = new List<MapUnit>();
 
