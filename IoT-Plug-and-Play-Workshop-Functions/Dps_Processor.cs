@@ -330,16 +330,22 @@ namespace IoT_Plug_and_Play_Workshop_Functions
 
                     if (bFoundTwin == false)
                     {
+                        log.LogInformation($"Twin '{regId}' not found");
+
                         AsyncPageable<DigitalTwinsModelData> allModels = _adtClient.GetModelsAsync();
                         await foreach (DigitalTwinsModelData model in allModels)
                         {
-
                             if (model.Id.Equals(dtmi))
                             {
                                 log.LogInformation($"Found model ID : {dtmi}");
                                 bFoundModel = true;
                                 break;
                             }
+                        }
+
+                        if (bFoundModel == false)
+                        {
+                            log.LogInformation($"Twin Model {dtmi} not found");
                         }
                     }
                 }
