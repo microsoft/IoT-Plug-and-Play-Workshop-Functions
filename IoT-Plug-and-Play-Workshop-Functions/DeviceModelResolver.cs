@@ -35,14 +35,14 @@ namespace IoT_Plug_and_Play_Workshop_Functions
             _githubToken = githubToken;
             _logger = logger;
         }
-        static private bool IsValidDtmi(string dtmi)
+        private bool IsValidDtmi(string dtmi)
         {
             // Regex defined at https://github.com/Azure/digital-twin-model-identifier#validation-regular-expressions
             Regex rx = new Regex(@"^dtmi:[A-Za-z](?:[A-Za-z0-9_]*[A-Za-z0-9])?(?::[A-Za-z](?:[A-Za-z0-9_]*[A-Za-z0-9])?)*;[1-9][0-9]{0,8}$");
             return rx.IsMatch(dtmi);
         }
 
-        static private string DtmiToPath(string dtmi)
+        public string DtmiToPath(string dtmi)
         {
             if (IsValidDtmi(dtmi))
             {
@@ -51,7 +51,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
             return string.Empty;
         }
 
-        static private async Task<string> GetModelContentAsync(string dtmiPath, string repositoryUrl)
+        public async Task<string> GetModelContentAsync(string dtmiPath, string repositoryUrl)
         {
             var jsonModel = string.Empty;
             try
@@ -89,7 +89,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
             return jsonModel;
         }
 
-        static private async Task<IEnumerable<string>> DtmiResolver(IReadOnlyCollection<Dtmi> dtmis)
+        private async Task<IEnumerable<string>> DtmiResolver(IReadOnlyCollection<Dtmi> dtmis)
         {
             List<string> resolvedModels = new List<string>();
             foreach (var dtmi in dtmis)

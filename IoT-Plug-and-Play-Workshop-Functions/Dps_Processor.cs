@@ -175,7 +175,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                         // If DTMI is given to DPS payload, parse it.
                         parsedModel = await DeviceModelResolveAndParse(modelId);
 
-                        await CreateTwinInAdt(modelId, registrationId, log);
+                        await ProcessDigitalTwin(modelId, registrationId, log);
                     }
 
                     //
@@ -258,6 +258,11 @@ namespace IoT_Plug_and_Play_Workshop_Functions
             return (ActionResult)new OkObjectResult(response);
         }
 
+        /// <summary>
+        /// Resolve IoT Plug and Play device model and parse the model
+        /// </summary>
+        /// <param name="dtmi"></param>
+        /// <returns></returns>
         private static async Task<IReadOnlyDictionary<Dtmi, DTEntityInfo>> DeviceModelResolveAndParse(string dtmi)
         {
             if (!string.IsNullOrEmpty(dtmi))
@@ -283,93 +288,28 @@ namespace IoT_Plug_and_Play_Workshop_Functions
         }
 
         /// <summary>
-        /// Find Digital Twin in ADT
+        /// Process Digital Twin
+        /// Search digital twin for this device.
+        /// If not exist, search digital twin model
+        /// If the model does not exist, create a model, then create digital twin
         /// </summary>
-        /// <param name="dtClient"></param>
         /// <param name="dtmi"></param>
-        /// <param name="deviceId"></param>
+        /// <param name="regId"></param>
         /// <param name="log"></param>
         /// <returns></returns>
-        private static async Task<bool>FindTwinFromDeviceId(DigitalTwinsClient dtClient, string dtmi, string deviceId, ILogger log)
+        private static async Task<bool> ProcessDigitalTwin(string dtmi, string regId, ILogger log)
         {
-            bool bFound = false;
-            try
-            {
+            bool bFoundTwin = false;
 
-                string query = $"SELECT * FROM DigitalTwins T WHERE $dtId = '{deviceId}' AND IS_OF_MODEL('{dtmi}')";
-                AsyncPageable<BasicDigitalTwin> asyncPageableResponse = dtClient.QueryAsync<BasicDigitalTwin>(query);
-
-                await foreach (BasicDigitalTwin twin in asyncPageableResponse)
-                {
-                    // Get DT ID from the Twin
-                    log.LogInformation($"Twin '{twin.Id}' with Registration ID '{deviceId}' found in DT");
-                    bFound = true;
-                    break;
-                }
-
-                if (bFound == false)
-                {
-                    log.LogInformation($"Twin '{deviceId}' not found");
-                }
-            }
-            catch (RequestFailedException rex)
-            {
-                log.LogError($"GetModelAsync: {rex.Status}:{rex.Message}");
-            }
-
-            return bFound;
-        }
-
-        /// <summary>
-        /// Find Digital Twin Model in ADT
-        /// </summary>
-        /// <param name="dtClient"></param>
-        /// <param name="dtmi"></param>
-        /// <param name="deviceId"></param>
-        /// <param name="log"></param>
-        /// <returns></returns>
-        private static async Task<bool> FindTwinModel(DigitalTwinsClient dtClient, string dtmi, ILogger log)
-        {
-            bool bFound = false;
-            try
-            {
-
-                AsyncPageable<DigitalTwinsModelData> dtModels = dtClient.GetModelsAsync();
-                await foreach (DigitalTwinsModelData dtModel in dtModels)
-                {
-
-                    if (dtModel.Id.Equals(dtmi))
-                    {
-                        log.LogInformation($"Found model ID : {dtmi}");
-                        bFound = true;
-                        break;
-                    }
-                }
-
-                if (bFound == false)
-                {
-                    log.LogInformation($"Twin Model '{dtmi}' not found");
-                }
-            }
-            catch (RequestFailedException rex)
-            {
-                log.LogError($"GetModelAsync: {rex.Status}:{rex.Message}");
-            }
-
-            return bFound;
-        }
-
-        private static async Task<bool> CreateTwinInAdt(string dtmi, string regId, ILogger log)
-        {
             if (string.IsNullOrEmpty(dtmi) || string.IsNullOrEmpty(regId))
             {
                 return false;
             }
             else if (_adtClient == null && !string.IsNullOrEmpty(_adtServiceUrl))
             {
+                // Create a digital twin client
                 try
                 {
-
                     //DefaultAzureCredential cred = new DefaultAzureCredential(
                     //    new DefaultAzureCredentialOptions { ManagedIdentityClientId = "https://digitaltwins.azure.net" }
                     //    );
@@ -383,40 +323,46 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                 catch (Exception e)
                 {
                     log.LogError($"ADT service client connection failed. {e}");
-                    return false;
                 }
             }
 
             if (_adtClient != null)
             {
-                bool bFoundTwin = false;
                 bool bFoundModel = false;
 
                 try
                 {
+                    // Check to see a digital twin for this device exists or not
                     bFoundTwin = await FindTwinFromDeviceId(_adtClient, dtmi, regId, log);
 
                     if (bFoundTwin == false)
                     {
-                        log.LogInformation($"Twin '{regId}' not found");
+                        log.LogInformation($"Digital Twin '{regId}' not found");
 
+                        // Check to see if a digital twin model for this DTMI exists or not
                         bFoundModel = await FindTwinModel(_adtClient, dtmi, log);
 
                         if (bFoundModel == false)
                         {
+                            // Digital Twin model does not exist.  Create one.
                             log.LogInformation($"Twin Model {dtmi} not found");
+                            bFoundModel = await CreateTwinModel(_adtClient, dtmi, log);
+                        }
+
+                        if (bFoundModel == true)
+                        {
+                            // Digital Twin model already exists.  Create digital twin.
+                            bFoundTwin = await CreateDigitalTwin(_adtClient, dtmi, regId, log);
                         }
                     }
                 }
                 catch (RequestFailedException rex)
                 {
                     log.LogError($"GetModelAsync: {rex.Status}:{rex.Message}");
-                    return false;
                 }
-
             }
 
-            return true;
+            return bFoundTwin;
 
             //    if (_adtClient != null)
             //    {
@@ -522,6 +468,168 @@ namespace IoT_Plug_and_Play_Workshop_Functions
             //    return false;
             //}
 
+        }
+
+        /// <summary>
+        /// Find Digital Twin in ADT
+        /// </summary>
+        private static async Task<bool> FindTwinFromDeviceId(DigitalTwinsClient dtClient, string dtmi, string deviceId, ILogger log)
+        {
+            bool bFound = false;
+            try
+            {
+                string query = $"SELECT * FROM DigitalTwins T WHERE $dtId = '{deviceId}' AND IS_OF_MODEL('{dtmi}')";
+                AsyncPageable<BasicDigitalTwin> asyncPageableResponse = dtClient.QueryAsync<BasicDigitalTwin>(query);
+
+                await foreach (BasicDigitalTwin twin in asyncPageableResponse)
+                {
+                    // Get DT ID from the Twin
+                    log.LogInformation($"Twin '{twin.Id}' with Registration ID '{deviceId}' found in DT");
+                    bFound = true;
+                    break;
+                }
+
+                if (bFound == false)
+                {
+                    log.LogInformation($"Twin '{deviceId}' not found");
+                }
+            }
+            catch (RequestFailedException rex)
+            {
+                log.LogError($"GetModelAsync: {rex.Status}:{rex.Message}");
+            }
+
+            return bFound;
+        }
+ 
+        /// <summary>
+        /// Find Digital Twin Model in ADT
+        /// </summary>
+        private static async Task<bool> FindTwinModel(DigitalTwinsClient dtClient, string dtmi, ILogger log)
+        {
+            bool bFound = false;
+            try
+            {
+                AsyncPageable<DigitalTwinsModelData> dtModels = dtClient.GetModelsAsync();
+
+                await foreach (DigitalTwinsModelData dtModel in dtModels)
+                {
+
+                    if (dtModel.Id.Equals(dtmi))
+                    {
+                        log.LogInformation($"Found model ID : {dtmi}");
+                        bFound = true;
+                        break;
+                    }
+                }
+
+                if (bFound == false)
+                {
+                    log.LogInformation($"Twin Model '{dtmi}' not found");
+                }
+            }
+            catch (RequestFailedException rex)
+            {
+                log.LogError($"GetModelAsync: {rex.Status}:{rex.Message}");
+            }
+
+            return bFound;
+        }
+
+        /// <summary>
+        /// Create digital twin model in Azure Digital Twins
+        /// </summary>
+        private static async Task<bool> CreateTwinModel(DigitalTwinsClient dtClient, string dtmi, ILogger log)
+        {
+            bool bCreated = false;
+            string dtmiPath = string.Empty;
+
+            try
+            {
+                if (_resolver == null)
+                {
+                    _resolver = new DeviceModelResolver(_modelRepoUrl_Private, _gitToken, _logger);
+                }
+
+                if (_resolver == null)
+                {
+                    return bCreated;
+                }
+
+                string modelContent = string.Empty;
+
+                // Create a path from DTMI
+                dtmiPath = _resolver.DtmiToPath(dtmi.ToString());
+
+                // Retrieve Device Model contents (JSON)
+                // if private repo is provided, resolve model with private repo first.
+                if (!string.IsNullOrEmpty(_modelRepoUrl_Private))
+                {
+                    modelContent = await _resolver.GetModelContentAsync(dtmiPath, _modelRepoUrl_Private);
+                }
+
+                // if not found in the private model repository, try public repository
+                if (string.IsNullOrEmpty(modelContent))
+                {
+                    modelContent = await _resolver.GetModelContentAsync(dtmiPath, "https://devicemodels.azure.com");
+                }
+
+                if (!string.IsNullOrEmpty(modelContent))
+                {
+                    // Create digital twin model with the JSON file
+                    var modelList = new List<string>();
+                    modelList.Add(modelContent);
+                    var model = await _adtClient.CreateModelsAsync(modelList);
+                    
+                    if (model != null && model.Value[0].Id.Equals(dtmi))
+                    {
+                        log.LogInformation($"Digital Twin Model {dtmi} created");
+                        bCreated = true;
+                    }
+                }
+                else
+                {
+                    log.LogWarning($"Device Model {dtmi} not found");
+                }
+            }
+            catch (RequestFailedException rex)
+            {
+                log.LogError($"GetModelAsync: {rex.Status}:{rex.Message}");
+            }
+
+            return bCreated;
+        }
+
+        /// <summary>
+        /// Create Digital Twin for a new device
+        /// </summary>
+        /// <param name=""></param>
+        /// <param name=""></param>
+        /// <param name="dtmi"></param>
+        /// <param name="deviceId"></param>
+        /// <param name="log"></param>
+        /// <returns></returns>
+        private static async Task<bool> CreateDigitalTwin(DigitalTwinsClient dtClient, string dtmi, string deviceId, ILogger log)
+        {
+            bool bCreated = false;
+
+            try
+            {
+                BasicDigitalTwin twinData = new BasicDigitalTwin
+                {
+                    Id = deviceId,
+                    Metadata = { ModelId = dtmi },
+                };
+
+                Response<BasicDigitalTwin> response = await _adtClient.CreateOrReplaceDigitalTwinAsync(deviceId, twinData);
+                log.LogInformation($"Digital Twin {response.Value.Id} (Model : {response.Value.Metadata.ModelId}) created");
+            }
+            catch (RequestFailedException rex)
+            {
+                log.LogError($"CreateOrReplaceDigitalTwinAsync: {rex.Status}:{rex.Message}");
+            }
+
+            return bCreated;
         }
 
         public class DpsResponse
