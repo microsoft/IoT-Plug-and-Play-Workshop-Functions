@@ -55,6 +55,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
             DpsResponse response = new DpsResponse();
             string registrationId;
             DateTime localDate = DateTime.Now;
+            bool isNewDevice = true;
 
             _logger = logger;
 
@@ -256,8 +257,6 @@ namespace IoT_Plug_and_Play_Workshop_Functions
         /// <summary>
         /// Resolve IoT Plug and Play device model and parse the model
         /// </summary>
-        /// <param name="dtmi"></param>
-        /// <returns></returns>
         private static async Task<IReadOnlyDictionary<Dtmi, DTEntityInfo>> DeviceModelResolveAndParse(string dtmi)
         {
             if (!string.IsNullOrEmpty(dtmi))
@@ -288,10 +287,6 @@ namespace IoT_Plug_and_Play_Workshop_Functions
         /// If not exist, search digital twin model
         /// If the model does not exist, create a model, then create digital twin
         /// </summary>
-        /// <param name="dtmi"></param>
-        /// <param name="regId"></param>
-        /// <param name="_logger"></param>
-        /// <returns></returns>
         private static async Task<bool> ProcessDigitalTwin(string dtmi, string regId)
         {
             bool bFoundTwin = false;
@@ -358,111 +353,6 @@ namespace IoT_Plug_and_Play_Workshop_Functions
             }
 
             return bFoundTwin;
-
-            //    if (_adtClient != null)
-            //    {
-            //        bool bFoundTwin = false;
-            //        bool bFoundModel = false;
-            //        // check if twin exists for this device
-            //        try
-            //        {
-
-            //            string query = $"SELECT * FROM DigitalTwins T WHERE $dtId = '{regId}' AND IS_OF_MODEL('{dtmi}')";
-            //            AsyncPageable<BasicDigitalTwin> asyncPageableResponse = _adtClient.QueryAsync<BasicDigitalTwin>(query);
-
-            //            await foreach (BasicDigitalTwin twin in asyncPageableResponse)
-            //            {
-            //                // Get DT ID from the Twin
-            //                _logger.LogInformation($"Twin '{twin.Id}' with Registration ID '{regId}' found in DT");
-            //                bFoundTwin = true;
-            //            }
-            //        }
-            //        catch (RequestFailedException rex)
-            //        {
-            //            _logger.LogError($"GetModelAsync: {rex.Status}:{rex.Message}");
-            //            return false;
-            //        }
-
-            //        if (bFoundTwin)
-            //        {
-            //            _logger.LogInformation($"Twin found. ID: {regId} (Model: {dtmi})");
-            //            return true;
-            //        }
-
-            //        AsyncPageable<DigitalTwinsModelData> allModels = _adtClient.GetModelsAsync();
-            //        await foreach (DigitalTwinsModelData model in allModels)
-            //        {
-
-            //            if (model.Id.Equals(dtmi))
-            //            {
-            //                _logger.LogInformation($"Found model ID : {dtmi}");
-            //                bFoundModel = true;
-            //                break;
-            //            }
-            //        }
-
-            //        //if (!bFoundModel)
-            //        //{
-            //        //    // create a model
-            //        //    // 1. Get model definition
-            //        //    string modelContent = string.Empty;
-            //        //    var modelList = new List<string>();
-            //        //    string dtmiPath = DtmiToPath(dtmi.ToString());
-
-
-            //        //    // if private repo is provided, resolve model with private repo first.
-            //        //    if (!string.IsNullOrEmpty(_modelRepoUrl))
-            //        //    {
-            //        //        modelContent = getModelContent(_modelRepoUrl, dtmiPath, _gitToken);
-            //        //    }
-
-            //        //    if (string.IsNullOrEmpty(modelContent))
-            //        //    {
-            //        //        modelContent = getModelContent("https://devicemodels.azure.com", dtmiPath, string.Empty);
-            //        //    }
-
-            //        //    if (string.IsNullOrEmpty(modelContent))
-            //        //    {
-            //        //        return false;
-            //        //    }
-
-            //        //    modelList.Add(modelContent);
-
-            //        //    try
-            //        //    {
-            //        //        await _adtClient.CreateModelsAsync(modelList);
-            //        //        _logger.LogInformation($"Digital Twin Model {dtmi} created");
-            //        //    }
-            //        //    catch (RequestFailedException rex)
-            //        //    {
-            //        //        _logger.LogError($"CreateModelsAsync: {rex.Status}:{rex.Message}");
-            //        //        return false;
-            //        //    }
-            //        }
-
-            //        // create a new twin
-            //        try
-            //        {
-            //            BasicDigitalTwin twinData = new BasicDigitalTwin
-            //            {
-            //                Id = regId,
-            //                Metadata = { ModelId = dtmi },
-            //            };
-
-            //            Response<BasicDigitalTwin> response = await _adtClient.CreateOrReplaceDigitalTwinAsync(regId, twinData);
-            //            _logger.LogInformation($"Digital Twin {response.Value.Id} (Model : {response.Value.Metadata.ModelId}) created");
-            //        }
-            //        catch (RequestFailedException rex)
-            //        {
-            //            _logger.LogError($"CreateOrReplaceDigitalTwinAsync: {rex.Status}:{rex.Message}");
-            //            return false;
-            //        }
-
-            //    }
-
-            //    return false;
-            //}
-
         }
 
         /// <summary>
@@ -598,12 +488,6 @@ namespace IoT_Plug_and_Play_Workshop_Functions
         /// <summary>
         /// Create Digital Twin for a new device
         /// </summary>
-        /// <param name=""></param>
-        /// <param name=""></param>
-        /// <param name="dtmi"></param>
-        /// <param name="deviceId"></param>
-        /// <param name="_logger"></param>
-        /// <returns></returns>
         private static async Task<bool> CreateDigitalTwin(DigitalTwinsClient dtClient, string dtmi, string deviceId)
         {
             bool bCreated = false;

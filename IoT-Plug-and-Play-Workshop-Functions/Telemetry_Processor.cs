@@ -35,6 +35,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                                      ILogger logger)
         {
             var exceptions = new List<Exception>();
+
             _logger = logger;
 
             foreach (EventData ed in eventData)
@@ -43,6 +44,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                 {
                     if (ed.SystemProperties.ContainsKey("iothub-message-source"))
                     {
+                        // look for device id
                         string deviceId = ed.SystemProperties["iothub-connection-device-id"].ToString();
                         string msgSource = ed.SystemProperties["iothub-message-source"].ToString();
                         string signalr_target = string.Empty;
@@ -53,16 +55,17 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                             _logger.LogInformation($"IoT Hub Message Source {msgSource}");
                         }
 
-                        _logger.LogInformation($"Telemetry Source  : {msgSource}");
                         _logger.LogInformation($"Telemetry Message : {Encoding.UTF8.GetString(ed.Body.Array, ed.Body.Offset, ed.Body.Count)}");
 
                         DateTime enqueuTime = (DateTime)ed.SystemProperties["iothub-enqueuedtime"];
 
+                        // look for IoT Plug and Play model id (DTMI)
                         if (ed.SystemProperties.ContainsKey("dt-dataschema"))
                         {
                             model_id = ed.SystemProperties["dt-dataschema"].ToString();
                         }
 
+                        // Initialize SignalR Data
                         SIGNALR_DATA signalrData = new SIGNALR_DATA
                         {
                             eventId = ed.SystemProperties["x-opt-sequence-number"].ToString(),
@@ -181,131 +184,127 @@ namespace IoT_Plug_and_Play_Workshop_Functions
             {
                 dtmi = eventData.SystemProperties["dt-dataschema"].ToString();
                 parsedModel = await DeviceModelResolveAndParse(dtmi);
-            }
 
-            if (parsedModel != null)
-            {
-                JObject jobjSignalR = JObject.Parse(signalrData.data);
-
-                foreach (KeyValuePair<string, JToken> property in jobjSignalR)
+                if (parsedModel != null)
                 {
-                    ProcessTelemetryEntry(signalrData, parsedModel, property.Key, property.Value);
+                    JObject jobjSignalR = JObject.Parse(signalrData.data);
+
+                    foreach (KeyValuePair<string, JToken> property in jobjSignalR)
+                    {
+                        ProcessTelemetryEntry(signalrData, parsedModel, property.Key, property.Value);
+                    }
                 }
-            }
-            else
-            {
-                return;
-            }
 
-            //
-            //Process ADT
-            //
-            // Step 1 : Connect to ADT
-            if (string.IsNullOrEmpty(_adtHostUrl))
-            {
-                return;
-            }
+                //
+                //Process ADT
+                //
+                // Step 1 : Connect to ADT
+                if (string.IsNullOrEmpty(_adtHostUrl))
+                {
+                    return;
+                }
 
-            if (_adtClient == null)
-            {
+                if (_adtClient == null)
+                {
+                    try
+                    {
+                        //Authenticate with Digital Twins
+                        var credential = new DefaultAzureCredential();
+                        ManagedIdentityCredential cred = new ManagedIdentityCredential("https://digitaltwins.azure.net");
+                        _adtClient = new DigitalTwinsClient(new Uri(_adtHostUrl),
+                                                            credential,
+                                                            new DigitalTwinsClientOptions
+                                                            {
+                                                                Transport = new HttpClientTransport(_httpClient)
+                                                            });
+                    }
+                    catch (Exception e)
+                    {
+                        _adtClient = null;
+                        _logger.LogError($"Error DigitalTwinsClient(): {e.Message}");
+                    }
+                }
+
+                // Step 2 : check if twin exists for this device
                 try
                 {
-                    //Authenticate with Digital Twins
-                    var credential = new DefaultAzureCredential();
-                    ManagedIdentityCredential cred = new ManagedIdentityCredential("https://digitaltwins.azure.net");
-                    _adtClient = new DigitalTwinsClient(new Uri(_adtHostUrl),
-                                                        credential,
-                                                        new DigitalTwinsClientOptions
-                                                        {
-                                                            Transport = new HttpClientTransport(_httpClient)
-                                                        });
+                    string query = $"SELECT * FROM DigitalTwins T WHERE $dtId = '{deviceId}' AND IS_OF_MODEL('{dtmi}')";
+                    // Make sure digital twin node exist for this device
+                    AsyncPageable<BasicDigitalTwin> asyncPageableResponse = _adtClient.QueryAsync<BasicDigitalTwin>(query);
+                    await foreach (BasicDigitalTwin twin in asyncPageableResponse)
+                    {
+                        if (twin.Id == deviceId)
+                        {
+                            bFoundTwin = true;
+                            break;
+                        }
+                    }
                 }
                 catch (Exception e)
                 {
-                    _adtClient = null;
-                    _logger.LogError($"Error DigitalTwinsClient(): {e.Message}");
+                    _logger.LogError($"Error QueryAsync(): {e.Message}");
+                    return;
                 }
-            }
 
-            // Step 2 : check if twin exists for this device
-            try
-            {
-                string query = $"SELECT * FROM DigitalTwins T WHERE $dtId = '{deviceId}' AND IS_OF_MODEL('{dtmi}')";
-                // Make sure digital twin node exist for this device
-                AsyncPageable<BasicDigitalTwin> asyncPageableResponse = _adtClient.QueryAsync<BasicDigitalTwin>(query);
-                await foreach (BasicDigitalTwin twin in asyncPageableResponse)
+                // Step 3 : Check if this twin has a parent
+                List<BasicDigitalTwin> parentTwins = await FindParentAsync(_adtClient, deviceId, "contains");
+
+                if (parentTwins == null || bFoundTwin == false)
                 {
-                    if (twin.Id == deviceId)
+                    return;
+                }
+
+                // Step 3 : We have twin and Device Model
+                var tdList = new List<TELEMETRY_DATA>();
+                JObject signalRData = JObject.Parse(signalrData.data);
+
+                List<KeyValuePair<Dtmi, DTEntityInfo>> interfaces = parsedModel.Where(r => r.Value.EntityKind == DTEntityKind.Telemetry).ToList();
+
+                // we are interested in Temperature and Light 
+                // Illuminance 
+                // No Semantic for Seeed Wio Terminal
+
+                foreach (var dt in interfaces)
+                {
+                    DTTelemetryInfo telemetryInfo = dt.Value as DTTelemetryInfo;
+
+                    var telemetryData = GetTelemetrydata(telemetryInfo, signalRData, dtmi);
+                    if (telemetryData != null)
                     {
-                        bFoundTwin = true;
-                        break;
+                        tdList.Add(telemetryData);
                     }
                 }
-            }
-            catch (Exception e)
-            {
-                _logger.LogError($"Error QueryAsync(): {e.Message}");
-                return;
-            }
 
-            // Step 3 : Check if this twin has a parent
-            List<BasicDigitalTwin> parentTwins = await FindParentAsync(_adtClient, deviceId, "contains");
-
-            if (parentTwins == null || bFoundTwin == false)
-            {
-                return;
-            }
-
-            // Step 3 : We have twin and Device Model
-            var tdList = new List<TELEMETRY_DATA>();
-            JObject signalRData = JObject.Parse(signalrData.data);
-
-            List<KeyValuePair<Dtmi, DTEntityInfo>> interfaces = parsedModel.Where(r => r.Value.EntityKind == DTEntityKind.Telemetry).ToList();
-
-            // we are interested in Temperature and Light 
-            // Illuminance 
-            // No Semantic for Seeed Wio Terminal
-
-            foreach (var dt in interfaces)
-            {
-                DTTelemetryInfo telemetryInfo = dt.Value as DTTelemetryInfo;
-
-                var telemetryData = GetTelemetrydata(telemetryInfo, signalRData, dtmi);
-                if (telemetryData != null)
+                // Update property of parent (room)
+                if (tdList.Count > 0)
                 {
-                    tdList.Add(telemetryData);
-                }
-            }
-
-            // Update property of parent (room)
-            if (tdList.Count > 0)
-            {
-                foreach (var telemetry in tdList)
-                {
-                    _logger.LogInformation($"Telemetry {telemetry.name} data : {telemetry.dataDouble}/{telemetry.dataInteger}");
-                    try
+                    foreach (var telemetry in tdList)
                     {
-                        var twinPatchData = new JsonPatchDocument();
-                        // loop through parents
-
-                        foreach (var parentTwin in parentTwins)
+                        _logger.LogInformation($"Telemetry {telemetry.name} data : {telemetry.dataDouble}/{telemetry.dataInteger}");
+                        try
                         {
-                            if (parentTwin.Contents.ContainsKey(telemetry.name))
-                            {
-                                twinPatchData.AppendReplace($"/{telemetry.name}", (telemetry.dataKind == DTEntityKind.Integer) ? telemetry.dataInteger : telemetry.dataDouble);
-                            }
-                            else
-                            {
-                                twinPatchData.AppendAdd($"/{telemetry.name}", (telemetry.dataKind == DTEntityKind.Integer) ? telemetry.dataInteger : telemetry.dataDouble);
-                            }
+                            var twinPatchData = new JsonPatchDocument();
+                            // loop through parents
 
-                            var updateResponse = await _adtClient.UpdateDigitalTwinAsync(parentTwin.Id, twinPatchData);
-                            _logger.LogInformation($"ADT Response : {updateResponse.Status}");
+                            foreach (var parentTwin in parentTwins)
+                            {
+                                if (parentTwin.Contents.ContainsKey(telemetry.name))
+                                {
+                                    twinPatchData.AppendReplace($"/{telemetry.name}", (telemetry.dataKind == DTEntityKind.Integer) ? telemetry.dataInteger : telemetry.dataDouble);
+                                }
+                                else
+                                {
+                                    twinPatchData.AppendAdd($"/{telemetry.name}", (telemetry.dataKind == DTEntityKind.Integer) ? telemetry.dataInteger : telemetry.dataDouble);
+                                }
+
+                                var updateResponse = await _adtClient.UpdateDigitalTwinAsync(parentTwin.Id, twinPatchData);
+                                _logger.LogInformation($"ADT Response : {updateResponse.Status}");
+                            }
                         }
-                    }
-                    catch (RequestFailedException e)
-                    {
-                        _logger.LogError($"Error UpdateDigitalTwinAsync():{e.Status}/{e.ErrorCode} : {e.Message}");
+                        catch (RequestFailedException e)
+                        {
+                            _logger.LogError($"Error UpdateDigitalTwinAsync():{e.Status}/{e.ErrorCode} : {e.Message}");
+                        }
                     }
                 }
             }
