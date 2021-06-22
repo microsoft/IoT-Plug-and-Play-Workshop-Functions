@@ -6,8 +6,8 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Azure.DigitalTwins.Core" Version="1.2.2" />
-    <PackageReference Include="Azure.Identity" Version="1.5.0-beta.1" />
-    <PackageReference Include="Microsoft.Azure.Devices.Provisioning.Service" Version="1.18.0-preview-001" />
+    <PackageReference Include="Azure.Identity" Version="1.4.0" />
+    <PackageReference Include="Microsoft.Azure.Devices.Provisioning.Service" Version="1.17.1" />
     <PackageReference Include="Microsoft.Azure.DigitalTwins.Parser" Version="4.0.8-preview" />
     <PackageReference Include="Microsoft.Azure.WebJobs.Extensions.EventGrid" Version="2.1.0" />
     <PackageReference Include="Microsoft.Azure.WebJobs.Extensions.EventHubs" Version="4.2.0" />
