@@ -1,0 +1,15 @@
+﻿{
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "FUNCTIONS_WORKER_RUNTIME": "dotnet",
+    "EVENTHUB_CS": "",
+    "ADT_HOST_URL": "",
+    "AzureSignalRConnectionString": "",
+    "MAP_DATASET_ID": "",
+    "MAP_STATESET_ID": "",
+    "MAP_KEY": "XNJ6ArZjTAW3XmRkaxryL0lbka2pstbimE3ArCmzaxY",
+    "PRIVATE_MODEL_REPOSIROTY_URL": "",
+    "PRIVATE_MODEL_REPOSIROTY_TOKEN": ""
+  }
+}
