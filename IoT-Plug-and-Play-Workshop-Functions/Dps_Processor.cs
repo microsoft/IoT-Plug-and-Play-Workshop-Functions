@@ -463,7 +463,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
 
                 if (!string.IsNullOrEmpty(modelContent))
                 {
-                    // _logger.LogInformation($"Model Content {modelContent}");
+                    _logger.LogInformation($"Model Content {modelContent}");
                     // Create digital twin model with the JSON file
                     var modelList = new List<string>();
                     modelList.Add(modelContent);
