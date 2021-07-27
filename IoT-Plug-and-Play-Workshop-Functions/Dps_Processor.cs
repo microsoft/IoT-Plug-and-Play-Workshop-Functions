@@ -170,6 +170,8 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                     IReadOnlyDictionary<Dtmi, DTEntityInfo> parsedModel = null;
                     string modelId = requestData?.deviceRuntimeContext?.payload?.modelId;
 
+                    _logger.LogInformation($"Model ID : {modelId}");
+
                     if (!string.IsNullOrEmpty(modelId))
                     {
                         // If DTMI is given to DPS payload, parse it.
