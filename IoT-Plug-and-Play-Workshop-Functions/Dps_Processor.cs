@@ -464,11 +464,14 @@ namespace IoT_Plug_and_Play_Workshop_Functions
 
                 if (!string.IsNullOrEmpty(modelContent))
                 {
+                    _logger.LogInformation($"Model Content {modelContent}");
                     // Create digital twin model with the JSON file
                     var modelList = new List<string>();
                     modelList.Add(modelContent);
+                    _logger.LogInformation($"CreateModelsAsync >> ");
                     var model = await _adtClient.CreateModelsAsync(modelList);
-                    
+                    _logger.LogInformation($"CreateModelsAsync << ");
+
                     if (model != null && model.Value[0].Id.Equals(dtmi))
                     {
                         _logger.LogInformation($"Digital Twin Model {dtmi} created");
