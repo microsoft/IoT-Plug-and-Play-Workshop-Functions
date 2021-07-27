@@ -480,9 +480,9 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                     foreach (var component in components)
                     {
                         DTComponentInfo dtComp = component.Value as DTComponentInfo;
-                        //modelList.Add(dtComp.Schema.Id.AbsoluteUri.ToString());
-                        _logger.LogInformation($"Create Mode {dtComp.Schema.Id.AbsoluteUri.ToString()}");
-                        await CreateTwinModel(dtClient, dtComp.Schema.Id.AbsoluteUri.ToString());
+                        modelList.Add(dtComp.Schema.Id.AbsoluteUri.ToString());
+                        _logger.LogInformation($"Creating Model {dtComp.Schema.Id.AbsoluteUri.ToString()}");
+                        //await CreateTwinModel(dtClient, dtComp.Schema.Id.AbsoluteUri.ToString());
                         //await _adtClient.CreateModelsAsync(modelList);
                         //modelList.Clear();
                     }
