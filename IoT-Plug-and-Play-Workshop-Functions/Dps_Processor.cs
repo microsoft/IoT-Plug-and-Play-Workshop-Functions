@@ -66,16 +66,15 @@ namespace IoT_Plug_and_Play_Workshop_Functions
             if (requestData.ContainsKey("enrollmentGroup"))
             {
                 _logger.LogInformation("Group Enrollment");
-                registrationId = requestData?.enrollmentGroup?.enrollmentGroupId;
+                //registrationId = requestData?.enrollmentGroup?.enrollmentGroupId;
             }
             else
             {
                 _logger.LogInformation("Individual Enrollment");
-                registrationId = requestData?.deviceRuntimeContext?.registrationId;
+                //registrationId = requestData?.deviceRuntimeContext?.registrationId;
             }
 
             _logger.LogInformation($"Registration Id : {registrationId}");
-
 
             string[] iothubs = requestData?.linkedHubs.ToObject<string[]>();
 
