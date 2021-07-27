@@ -61,6 +61,8 @@ namespace IoT_Plug_and_Play_Workshop_Functions
 
             dynamic requestData = JsonConvert.DeserializeObject(requestBody);
 
+            registrationId = requestData?.deviceRuntimeContext?.registrationId;
+
             if (requestData.ContainsKey("enrollmentGroup"))
             {
                 _logger.LogInformation("Group Enrollment");
@@ -71,6 +73,9 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                 _logger.LogInformation("Individual Enrollment");
                 registrationId = requestData?.deviceRuntimeContext?.registrationId;
             }
+
+            _logger.LogInformation($"Registration Id : {registrationId}");
+
 
             string[] iothubs = requestData?.linkedHubs.ToObject<string[]>();
 
