@@ -466,10 +466,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                     _logger.LogInformation($"Model Content {modelContent}");
                     // Create digital twin model with the JSON file
                     var modelList = new List<string>();
-                    modelList.Add(modelContent);
-
                     var modelData = await _resolver.ParseModelAsync(dtmi.ToString());
-
                     var components = modelData.Where(r => r.Value.EntityKind == DTEntityKind.Component).ToList();
 
                     foreach (var component in components)
@@ -477,6 +474,8 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                         DTComponentInfo dtComp = component.Value as DTComponentInfo;
                         modelList.Add(dtComp.Schema.Id.AbsoluteUri);
                     }
+
+                    modelList.Add(modelContent);
 
                     //_logger.LogInformation($"CreateModelsAsync >> ");
                     var model = await _adtClient.CreateModelsAsync(modelList);
