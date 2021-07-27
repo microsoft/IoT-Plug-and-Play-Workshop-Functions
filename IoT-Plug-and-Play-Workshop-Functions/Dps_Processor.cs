@@ -86,39 +86,32 @@ namespace IoT_Plug_and_Play_Workshop_Functions
             /* Payload Example
             {
               "enrollmentGroup": {
-                "enrollmentGroupId": "PVDemo-Group-Enrollment-Custom-Allocation",
+                "enrollmentGroupId": "SAS-IoT-Devices",
                 "attestation": {
                   "type": "symmetricKey"
                 },
-                "capabilities": {
-                  "iotEdge": false
-                },
-                "etag": "\"1a055216-0000-0800-0000-60a637160000\"",
+                "etag": "\"3206e072-0000-0800-0000-60ffc1960000\"",
                 "provisioningStatus": "enabled",
-                "reprovisionPolicy": {
-                  "updateHubAssignment": true,
-                  "migrateDeviceData": true
-                },
-                "createdDateTimeUtc": "2021-05-20T10:15:51.2294536Z",
-                "lastUpdatedDateTimeUtc": "2021-05-20T10:16:54.6543548Z",
+                "createdDateTimeUtc": "2021-07-27T08:19:34.2864775Z",
+                "lastUpdatedDateTimeUtc": "2021-07-27T08:19:34.2864775Z",
                 "allocationPolicy": "custom",
-                "iotHubs": [
-                  "PVDemo-IoTHub.azure-devices.net"
-                ],
                 "customAllocationDefinition": {
-                  "webhookUrl": "https://pvdemo-functions.azurewebsites.net/api/dps_processor?****",
+                  "webhookUrl": "https://iotpnpws-functions-20210726.azurewebsites.net/api/Dps_Processor?****",
                   "apiVersion": "2019-03-31"
                 }
               },
               "deviceRuntimeContext": {
-                "registrationId": "WioTerminal",
+                "registrationId": "SAS-IoT-Devices",
+                "currentIotHubHostName": "IoTPnPWS-Hub-20210726.azure-devices.net",
+                "currentDeviceId": "SAS-IoT-Devices",
                 "symmetricKey": {},
                 "payload": {
-                  "modelId": "dtmi:seeedkk:wioterminal:wioterminal_aziot_example_gps;5"
+                  "iotcModelId": "dtmi:azureiot:PhoneAsADevice;2",
+                  "modelId": "dtmi:azureiot:PhoneAsADevice;2"
                 }
               },
               "linkedHubs": [
-                "PVDemo-IoTHub.azure-devices.net"
+                "IoTPnPWS-Hub-20210726.azure-devices.net"
               ]
             }
             */
@@ -458,12 +451,14 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                 // if private repo is provided, resolve model with private repo first.
                 if (!string.IsNullOrEmpty(_modelRepoUrl_Private))
                 {
+                    _logger.LogInformation($"Searching Model in Private Model repo {_modelRepoUrl_Private}");
                     modelContent = await _resolver.GetModelContentAsync(dtmiPath, _modelRepoUrl_Private);
                 }
 
                 // if not found in the private model repository, try public repository
                 if (string.IsNullOrEmpty(modelContent))
                 {
+                    _logger.LogInformation($"Searching Model in Public Model repo");
                     modelContent = await _resolver.GetModelContentAsync(dtmiPath, "https://devicemodels.azure.com");
                 }
 
