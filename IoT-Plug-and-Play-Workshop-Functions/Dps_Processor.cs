@@ -338,12 +338,20 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                             _logger.LogInformation($"Twin Model {dtmi} not found");
                             bFoundModel = await CreateTwinModel(_adtClient, dtmi);
                         }
+                        else
+                        {
+                            _logger.LogInformation($"Twin Model {dtmi} found");
+                        }
 
                         //if (bFoundModel == true)
                         {
                             // Digital Twin model already exists.  Create digital twin.
                             bFoundTwin = await CreateDigitalTwin(_adtClient, dtmi, regId);
                         }
+                    }
+                    else 
+                    {
+                    
                     }
                 }
                 catch (RequestFailedException rex)
