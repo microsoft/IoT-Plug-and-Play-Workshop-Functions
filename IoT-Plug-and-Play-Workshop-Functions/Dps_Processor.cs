@@ -275,7 +275,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                 }
                 catch (Exception e)
                 {
-                    _logger.LogError($"Error Resolve(): {e.Message}");
+                    _logger.LogError($"Error DeviceModelResolveAndParse(): {e.Message}");
                 }
             }
 
@@ -349,7 +349,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                 }
                 catch (RequestFailedException rex)
                 {
-                    _logger.LogError($"GetModelAsync: {rex.Status}:{rex.Message}");
+                    _logger.LogError($"ProcessDigitalTwin: {rex.Status}:{rex.Message}");
                 }
             }
 
@@ -382,7 +382,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
             }
             catch (RequestFailedException rex)
             {
-                _logger.LogError($"GetModelAsync: {rex.Status}:{rex.Message}");
+                _logger.LogError($"FindTwinFromDeviceId: {rex.Status}:{rex.Message}");
             }
 
             return bFound;
@@ -416,7 +416,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
             }
             catch (RequestFailedException rex)
             {
-                _logger.LogError($"GetModelAsync: {rex.Status}:{rex.Message}");
+                _logger.LogError($"FindTwinModel: {rex.Status}:{rex.Message}");
             }
 
             return bFound;
@@ -482,7 +482,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
             }
             catch (RequestFailedException rex)
             {
-                _logger.LogError($"GetModelAsync: {rex.Status}:{rex.Message}");
+                _logger.LogError($"CreateTwinModel: {rex.Status}:{rex.Message}");
             }
 
             return bCreated;
@@ -508,7 +508,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
             }
             catch (RequestFailedException rex)
             {
-                _logger.LogError($"CreateOrReplaceDigitalTwinAsync: {rex.Status}:{rex.Message}");
+                _logger.LogError($"CreateDigitalTwin: {rex.Status}:{rex.Message}");
             }
 
             return bCreated;
