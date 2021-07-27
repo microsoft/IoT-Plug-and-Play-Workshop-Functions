@@ -340,7 +340,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                             bFoundModel = await CreateTwinModel(_adtClient, dtmi);
                         }
 
-                        if (bFoundModel == true)
+                        //if (bFoundModel == true)
                         {
                             // Digital Twin model already exists.  Create digital twin.
                             bFoundTwin = await CreateDigitalTwin(_adtClient, dtmi, regId);
@@ -464,13 +464,13 @@ namespace IoT_Plug_and_Play_Workshop_Functions
 
                 if (!string.IsNullOrEmpty(modelContent))
                 {
-                    _logger.LogInformation($"Model Content {modelContent}");
+                    // _logger.LogInformation($"Model Content {modelContent}");
                     // Create digital twin model with the JSON file
                     var modelList = new List<string>();
                     modelList.Add(modelContent);
-                    _logger.LogInformation($"CreateModelsAsync >> ");
+                    //_logger.LogInformation($"CreateModelsAsync >> ");
                     var model = await _adtClient.CreateModelsAsync(modelList);
-                    _logger.LogInformation($"CreateModelsAsync << ");
+                    //_logger.LogInformation($"CreateModelsAsync << ");
 
                     if (model != null && model.Value[0].Id.Equals(dtmi))
                     {
