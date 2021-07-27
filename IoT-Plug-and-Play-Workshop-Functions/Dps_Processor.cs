@@ -473,6 +473,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                     {
                         DTComponentInfo dtComp = component.Value as DTComponentInfo;
                         modelList.Add(dtComp.Schema.Id.AbsoluteUri.ToString());
+                        _logger.LogInformation($"Create Mode {dtComp.Schema.Id.AbsoluteUri.ToString()}");
                         await _adtClient.CreateModelsAsync(modelList);
                         modelList.Clear();
                     }
