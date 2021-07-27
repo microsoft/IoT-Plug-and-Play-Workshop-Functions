@@ -61,7 +61,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                 {
                     _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Token", _githubToken);
                 }
-                _logger.LogInformation($"GetModelContentAsync(1) Url {fullPath}");
+                //_logger.LogInformation($"GetModelContentAsync(1) Url {fullPath}");
                 jsonModel = await _httpClient.GetStringAsync(fullPath);
             }
             catch (Exception e)
@@ -81,7 +81,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                 {
                     _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Token", _githubToken);
                 }
-                _logger.LogInformation($"GetModelContentAsync(2) Url {fullPath}");
+                //_logger.LogInformation($"GetModelContentAsync(2) Url {fullPath}");
                 jsonModel = await _httpClient.GetStringAsync(fullPath);
             }
             catch (Exception e)
