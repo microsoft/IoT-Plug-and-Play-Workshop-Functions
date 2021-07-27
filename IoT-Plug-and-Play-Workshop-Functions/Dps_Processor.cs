@@ -61,6 +61,8 @@ namespace IoT_Plug_and_Play_Workshop_Functions
 
             dynamic requestData = JsonConvert.DeserializeObject(requestBody);
 
+            _logger.LogInformation(requestBody);
+
             registrationId = requestData?.deviceRuntimeContext?.registrationId;
 
             if (requestData.ContainsKey("enrollmentGroup"))
