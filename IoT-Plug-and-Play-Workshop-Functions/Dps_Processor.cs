@@ -55,7 +55,6 @@ namespace IoT_Plug_and_Play_Workshop_Functions
             DpsResponse response = new DpsResponse();
             string registrationId;
             DateTime localDate = DateTime.Now;
-            bool isNewDevice = true;
 
             _logger = logger;
 
