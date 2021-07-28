@@ -335,7 +335,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                         if (bFoundModel == false)
                         {
                             // Digital Twin model does not exist.  Create one.
-                            _logger.LogInformation($"Twin Model {dtmi} not found");
+                            //_logger.LogInformation($"Twin Model {dtmi} not found");
                             bFoundModel = await CreateTwinModel(_adtClient, parsedModel, dtmi);
                         }
                         else
@@ -498,7 +498,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
 
                     if (!string.IsNullOrEmpty(modelContent))
                     {
-                        _logger.LogInformation($"Model Content {modelContent}");
+                        //_logger.LogInformation($"Model Content {modelContent}");
 
                         modelContentList.Add(modelContent);
                     }
