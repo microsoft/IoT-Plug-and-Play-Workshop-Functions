@@ -3,13 +3,13 @@
   "Values": {
     "AzureWebJobsStorage": "UseDevelopmentStorage=true",
     "FUNCTIONS_WORKER_RUNTIME": "dotnet",
-    "EVENTHUB_CS": "",
-    "ADT_HOST_URL": "",
-    "AzureSignalRConnectionString": "",
-    "MAP_DATASET_ID": "",
-    "MAP_STATESET_ID": "",
-    "MAP_KEY": "XNJ6ArZjTAW3XmRkaxryL0lbka2pstbimE3ArCmzaxY",
-    "PRIVATE_MODEL_REPOSIROTY_URL": "",
+    "EVENTHUB_CS": "Endpoint=sb://iotpnpws-eventhubs-20210726.servicebus.windows.net/;SharedAccessKeyName=TelemetryListenRule;SharedAccessKey=EBTsjVpGF6moT55xDY1mLdugurmCdUlmFkCTmRf9tW0=;EntityPath=devicetelemetryhub",
+    "ADT_HOST_URL": "https://IoTPnPWS-ADT-20210726.api.wus2.digitaltwins.azure.net",
+    "AzureSignalRConnectionString": "Endpoint=https://iotpnpws-signalr-20210726.service.signalr.net;AccessKey=QzGW1rT1gLfMLRTGDPOXI6hG+RkGjXyM2e7PXHxz+Ak=",
+    "MAP_DATASET_ID": "802d8929-c8f2-bc46-99bb-3034a827c153",
+    "MAP_STATESET_ID": "2974c5db-0340-bec9-76ae-ccae497848d4",
+    "MAP_KEY": "943uaFVW9bTHUx7lG2kz0rQPi8ZFVhmwnJF_dDkClJU",
+    "PRIVATE_MODEL_REPOSIROTY_URL": "https://raw.githubusercontent.com/daisukeiot/iot-plugandplay-models/privatemodels",
     "PRIVATE_MODEL_REPOSIROTY_TOKEN": ""
   }
 }

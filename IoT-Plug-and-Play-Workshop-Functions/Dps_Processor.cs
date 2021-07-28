@@ -164,14 +164,14 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                     IReadOnlyDictionary<Dtmi, DTEntityInfo> parsedModel = null;
                     string modelId = requestData?.deviceRuntimeContext?.payload?.modelId;
 
-                    _logger.LogInformation($"Model ID : {modelId}");
-
                     if (!string.IsNullOrEmpty(modelId))
                     {
+                        _logger.LogInformation($"Model ID : {modelId}");
+
                         // If DTMI is given to DPS payload, parse it.
                         parsedModel = await DeviceModelResolveAndParse(modelId);
 
-                        await ProcessDigitalTwin(modelId, registrationId);
+                        await ProcessDigitalTwin(modelId, parsedModel, registrationId);
                     }
 
                     //
@@ -287,7 +287,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
         /// If not exist, search digital twin model
         /// If the model does not exist, create a model, then create digital twin
         /// </summary>
-        private static async Task<bool> ProcessDigitalTwin(string dtmi, string regId)
+        private static async Task<bool> ProcessDigitalTwin(string dtmi, IReadOnlyDictionary<Dtmi, DTEntityInfo> parsedModel, string regId)
         {
             bool bFoundTwin = false;
 
@@ -336,17 +336,17 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                         {
                             // Digital Twin model does not exist.  Create one.
                             _logger.LogInformation($"Twin Model {dtmi} not found");
-                            bFoundModel = await CreateTwinModel(_adtClient, dtmi);
+                            bFoundModel = await CreateTwinModel(_adtClient, parsedModel, dtmi);
                         }
                         else
                         {
                             _logger.LogInformation($"Twin Model {dtmi} found");
                         }
 
-                        //if (bFoundModel == true)
+                        if (bFoundModel == true)
                         {
                             // Digital Twin model already exists.  Create digital twin.
-                            bFoundTwin = await CreateDigitalTwin(_adtClient, dtmi, regId);
+                            bFoundTwin = await CreateDigitalTwin(_adtClient, parsedModel, dtmi, regId);
                         }
                     }
                     else 
@@ -432,10 +432,12 @@ namespace IoT_Plug_and_Play_Workshop_Functions
         /// <summary>
         /// Create digital twin model in Azure Digital Twins
         /// </summary>
-        private static async Task<bool> CreateTwinModel(DigitalTwinsClient dtClient, string dtmi)
+        private static async Task<bool> CreateTwinModel(DigitalTwinsClient dtClient, IReadOnlyDictionary<Dtmi, DTEntityInfo> parsedModel, string dtmi)
         {
             bool bCreated = false;
             string dtmiPath = string.Empty;
+            var modelList = new List<string>();
+            var modelContentList = new List<string>();
 
             try
             {
@@ -451,57 +453,77 @@ namespace IoT_Plug_and_Play_Workshop_Functions
 
                 string modelContent = string.Empty;
 
-                // Create a path from DTMI
-                dtmiPath = _resolver.DtmiToPath(dtmi.ToString());
+                // check to see if this model contains components
 
-                // Retrieve Device Model contents (JSON)
-                // if private repo is provided, resolve model with private repo first.
-                if (!string.IsNullOrEmpty(_modelRepoUrl_Private))
+                var components = parsedModel.Where(r => r.Value.EntityKind == DTEntityKind.Component).ToList();
+
+                if (components != null)
                 {
-                    _logger.LogInformation($"Searching Model in Private Model repo {_modelRepoUrl_Private}");
-                    modelContent = await _resolver.GetModelContentAsync(dtmiPath, _modelRepoUrl_Private);
-                }
-
-                // if not found in the private model repository, try public repository
-                if (string.IsNullOrEmpty(modelContent))
-                {
-                    _logger.LogInformation($"Searching Model in Public Model repo");
-                    modelContent = await _resolver.GetModelContentAsync(dtmiPath, "https://devicemodels.azure.com");
-                }
-
-                if (!string.IsNullOrEmpty(modelContent))
-                {
-                    _logger.LogInformation($"Model Content {modelContent}");
-                    // Create digital twin model with the JSON file
-                    var modelList = new List<string>();
-                    var modelData = await _resolver.ParseModelAsync(dtmi.ToString());
-                    var components = modelData.Where(r => r.Value.EntityKind == DTEntityKind.Component).ToList();
-
+                    // Add Components' DTMI to the list.
                     foreach (var component in components)
                     {
-                        DTComponentInfo dtComp = component.Value as DTComponentInfo;
-                        modelList.Add(dtComp.Schema.Id.AbsoluteUri.ToString());
-                        _logger.LogInformation($"Creating Model {dtComp.Schema.Id.AbsoluteUri.ToString()}");
-                        //await CreateTwinModel(dtClient, dtComp.Schema.Id.AbsoluteUri.ToString());
-                        //await _adtClient.CreateModelsAsync(modelList);
-                        //modelList.Clear();
+                        DTComponentInfo compInfo = component.Value as DTComponentInfo;
+                        var compId = compInfo.Schema.Id.AbsoluteUri;
+                        var bFound = await FindTwinModel(dtClient, compId);
+
+                        if (bFound == false)
+                        {
+                            modelList.Add(compInfo.Schema.Id.AbsoluteUri);
+                        }
+                    }
+                }
+
+                // Add model id to the list
+                modelList.Add(dtmi);
+
+                foreach (var modelId in modelList)
+                {
+                    // Create a path from DTMI
+                    dtmiPath = _resolver.DtmiToPath(modelId);
+
+                    // Retrieve Device Model contents (JSON)
+                    // if private repo is provided, resolve model with private repo first.
+                    if (!string.IsNullOrEmpty(_modelRepoUrl_Private))
+                    {
+                        _logger.LogInformation($"Searching Model in Private Model repo {_modelRepoUrl_Private}");
+                        modelContent = await _resolver.GetModelContentAsync(dtmiPath, _modelRepoUrl_Private);
                     }
 
-                    modelList.Add(modelContent);
-
-                    //_logger.LogInformation($"CreateModelsAsync >> ");
-                    var model = await _adtClient.CreateModelsAsync(modelList);
-                    //_logger.LogInformation($"CreateModelsAsync << ");
-
-                    if (model != null && model.Value[0].Id.Equals(dtmi))
+                    // if not found in the private model repository, try public repository
+                    if (string.IsNullOrEmpty(modelContent))
                     {
-                        _logger.LogInformation($"Digital Twin Model {dtmi} created");
+                        _logger.LogInformation($"Searching Model in Public Model repo");
+                        modelContent = await _resolver.GetModelContentAsync(dtmiPath, "https://devicemodels.azure.com");
+                    }
+
+                    if (!string.IsNullOrEmpty(modelContent))
+                    {
+                        _logger.LogInformation($"Model Content {modelContent}");
+
+                        modelContentList.Add(modelContent);
+                    }
+                    else
+                    {
+                        _logger.LogWarning($"Device Model content for {dtmi} not found");
+                        break;
+                    }
+                }
+
+                if (modelContentList.Count > 0)
+                {
+                    var result = await _adtClient.CreateModelsAsync(modelContentList);
+
+                    var httpResponse = result.GetRawResponse();
+
+
+                    if (httpResponse.Status == 201)
+                    {
                         bCreated = true;
                     }
                 }
                 else
                 {
-                    _logger.LogWarning($"Device Model {dtmi} not found");
+                    _logger.LogWarning($"Device Model Definition file for {dtmi} not found");
                 }
             }
             catch (RequestFailedException rex)
@@ -515,7 +537,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
         /// <summary>
         /// Create Digital Twin for a new device
         /// </summary>
-        private static async Task<bool> CreateDigitalTwin(DigitalTwinsClient dtClient, string dtmi, string deviceId)
+        private static async Task<bool> CreateDigitalTwin(DigitalTwinsClient dtClient, IReadOnlyDictionary<Dtmi, DTEntityInfo> parsedModel, string dtmi, string deviceId)
         {
             bool bCreated = false;
 
@@ -524,11 +546,31 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                 BasicDigitalTwin twinData = new BasicDigitalTwin
                 {
                     Id = deviceId,
+                    // model Id of digital twin
                     Metadata = { ModelId = dtmi },
+                    Contents = {},
                 };
 
+                var components = parsedModel.Where(r => r.Value.EntityKind == DTEntityKind.Component).ToList();
+
+                if (components.Count > 0)
+                {
+                    foreach(var component in components)
+                    {
+                        DTComponentInfo dtComp = component.Value as DTComponentInfo;
+                        twinData.Contents.Add(dtComp.Name, new BasicDigitalTwinComponent { });
+                    }
+                }
+
                 Response<BasicDigitalTwin> response = await _adtClient.CreateOrReplaceDigitalTwinAsync(deviceId, twinData);
-                _logger.LogInformation($"Digital Twin {response.Value.Id} (Model : {response.Value.Metadata.ModelId}) created");
+
+                var result = response.GetRawResponse();
+
+                if ( result.Status >= 200 && result.Status <= 299)
+                {
+                    _logger.LogInformation($"Digital Twin {response.Value.Id} (Model : {response.Value.Metadata.ModelId}) created");
+                    bCreated = true;
+                }
             }
             catch (RequestFailedException rex)
             {
