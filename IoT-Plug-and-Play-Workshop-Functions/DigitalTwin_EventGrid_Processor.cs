@@ -160,7 +160,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                                                  new JProperty("value", operation["value"].ToString()),
                                                  new JProperty("eventTimestamp", DateTime.Now.ToString("s"))))));
 
-                                        log.LogInformation($"Updating Map Unit {featureId} {operation["path"].ToString()} to {operation["value"].ToString()}");
+                                        log.LogInformation($"Updating Map Unit v2 {featureId} {operation["path"].ToString()} to {operation["value"].ToString()}");
 
                                         var response = await _httpClient.PostAsync(
                                             $"https://us.atlas.microsoft.com/featureStateSets/{_mapStatesetId}/featureStates/{featureId}?api-version=2.0&subscription-key={_mapKey}",
