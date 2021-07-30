@@ -163,7 +163,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                                         log.LogInformation($"Updating Map Unit {featureId} {operation["path"].ToString()} to {operation["value"].ToString()}");
 
                                         var response = await _httpClient.PostAsync(
-                                            $"https://us.atlas.microsoft.com/featureState/state?api-version=1.0&statesetID={_mapStatesetId}&featureID={featureId}&subscription-key={_mapKey}",
+                                            $"https://us.atlas.microsoft.com/featureStateSets/{_mapStatesetId}/featureStates/{featureId}?api-version=2.0&subscription-key={_mapKey}",
                                             new StringContent(postcontent.ToString()));
 
                                         log.LogInformation(await response.Content.ReadAsStringAsync());
@@ -207,7 +207,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
 
             string unitId = string.Empty;
 
-            string url = $"https://us.atlas.microsoft.com/wfs/datasets/{_mapDatasetId}/collections/unit/items?api-version=1.0&limit=1&subscription-key={_mapKey}&name={roomNumber}";
+            string url = $"https://us.atlas.microsoft.com/wfs/datasets/{_mapDatasetId}/collections/unit/items?api-version=2.0&limit=1&subscription-key={_mapKey}&name={roomNumber}";
 
             using (var client = new HttpClient())
             {
