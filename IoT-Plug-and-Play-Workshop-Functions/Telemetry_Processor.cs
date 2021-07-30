@@ -389,9 +389,16 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                         }
                         break;
 
+                    case DTEntityKind.Double:
                     case DTEntityKind.String:
-                    case DTEntityKind.Integer:
                     case DTEntityKind.Float:
+                        break;
+
+                    case DTEntityKind.Integer:
+                        if (model[0].Name == "co2")
+                        {
+                            break;
+                        }
                         break;
                     default:
                         _logger.LogInformation($"Unsupported DTEntry King {model[0].Schema.EntityKind.ToString()}");
@@ -444,13 +451,17 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                     data = new TELEMETRY_DATA();
                     data.dataKind = telemetryInfo.Schema.EntityKind;
                     data.name = telemetryInfo.Name;
-                    if (data.dataKind == DTEntityKind.Integer)
+
+                    if (signalRData[telemetryInfo.Name] != null)
                     {
-                        data.dataInteger = (long)signalRData[telemetryInfo.Name];
-                    }
-                    else
-                    {
-                        data.dataDouble = (double)signalRData[telemetryInfo.Name];
+                        if (data.dataKind == DTEntityKind.Integer)
+                        {
+                            data.dataInteger = (long)signalRData[telemetryInfo.Name];
+                        }
+                        else
+                        {
+                            data.dataDouble = (double)signalRData[telemetryInfo.Name];
+                        }
                     }
                     data.dataName = telemetryInfo.Name;
                     data.semanticType = semanticType;
@@ -478,6 +489,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                     }
                 }
             }
+//            catch (
             catch (RequestFailedException e)
             {
                 _logger.LogError($"Error FindParentAsync() :{e.Status}:{e.Message}");
