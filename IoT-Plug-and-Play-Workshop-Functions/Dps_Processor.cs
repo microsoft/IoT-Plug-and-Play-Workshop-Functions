@@ -325,23 +325,24 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                     // Check to see a digital twin for this device exists or not
                     bFoundTwin = await FindTwinFromDeviceId(_adtClient, dtmi, regId);
 
+                    // Check to see if a digital twin model for this DTMI exists or not
+                    // Do this in case models are deleted.
+                    bFoundModel = await FindTwinModel(_adtClient, dtmi);
+
+                    if (bFoundModel == false)
+                    {
+                        // Digital Twin model does not exist.  Create one.
+                        //_logger.LogInformation($"Twin Model {dtmi} not found");
+                        bFoundModel = await CreateTwinModel(_adtClient, parsedModel, dtmi);
+                    }
+                    else
+                    {
+                        _logger.LogInformation($"Twin Model {dtmi} found");
+                    }
+
                     if (bFoundTwin == false)
                     {
                         _logger.LogInformation($"Digital Twin '{regId}' not found");
-
-                        // Check to see if a digital twin model for this DTMI exists or not
-                        bFoundModel = await FindTwinModel(_adtClient, dtmi);
-
-                        if (bFoundModel == false)
-                        {
-                            // Digital Twin model does not exist.  Create one.
-                            //_logger.LogInformation($"Twin Model {dtmi} not found");
-                            bFoundModel = await CreateTwinModel(_adtClient, parsedModel, dtmi);
-                        }
-                        else
-                        {
-                            _logger.LogInformation($"Twin Model {dtmi} found");
-                        }
 
                         if (bFoundModel == true)
                         {
@@ -349,9 +350,15 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                             bFoundTwin = await CreateDigitalTwin(_adtClient, parsedModel, dtmi, regId);
                         }
                     }
-                    else 
+
+                    if (bFoundTwin)
                     {
-                    
+                        // workaround
+                        // Create a relationship if this is PaaD
+                        if (dtmi.StartsWith("dtmi:azureiot:PhoneAsADevice"))
+                        {
+                            _logger.LogInformation("Found Phone as a Device Model");
+                        }
                     }
                 }
                 catch (RequestFailedException rex)
