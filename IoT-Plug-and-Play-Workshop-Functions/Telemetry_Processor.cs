@@ -367,17 +367,17 @@ namespace IoT_Plug_and_Play_Workshop_Functions
 
 
 
-                List<KeyValuePair<Dtmi, DTEntityInfo>> dtInterfaces = parsedModel.Where(r => r.Value.EntityKind == DTEntityKind.Telemetry).ToList();
+                List<KeyValuePair<Dtmi, DTEntityInfo>> dtTelemetryList = parsedModel.Where(r => r.Value.EntityKind == DTEntityKind.Telemetry).ToList();
 
                 // we are interested in Temperature and Light 
                 // Illuminance 
                 // No Semantic for Seeed Wio Terminal
 
-                foreach (var dtInterface in dtInterfaces)
+                foreach (var dtTelemetry in dtTelemetryList)
                 {
-                    DTTelemetryInfo telemetryInfo = dtInterface.Value as DTTelemetryInfo;
+                    DTTelemetryInfo dtTelemetryInfo = dtTelemetry.Value as DTTelemetryInfo;
 
-                    var telemetryData = GetTelemetrydata(telemetryInfo, signalRData, dtmi);
+                    var telemetryData = GetTelemetrydata(dtTelemetryInfo, signalRData, dtmi);
                     if (telemetryData != null)
                     {
                         tdList.Add(telemetryData);
@@ -390,6 +390,17 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                     foreach (var telemetry in tdList)
                     {
                         _logger.LogInformation($"Telemetry {telemetry.name} data : {telemetry.dataDouble}/{telemetry.dataInteger}");
+                        var propertyName = string.Empty;
+
+                        if (telemetry.telmetryInterfaceId.Contains("dtmi:atmark_techno:Armadillo:EnvSensor") && telemetry.name.Equals("e_co2"))
+                        {
+                            propertyName = "co2";
+                        }
+                        else
+                        {
+                            propertyName = telemetry.name;
+                        }
+
                         try
                         {
                             var twinPatchData = new JsonPatchDocument();
@@ -397,13 +408,13 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                             foreach (var parentTwin in parentTwins)
                             {
                                 // loop through parents
-                                if (parentTwin.Contents.ContainsKey(telemetry.name))
+                                if (parentTwin.Contents.ContainsKey(propertyName))
                                 {
-                                    twinPatchData.AppendReplace($"/{telemetry.name}", (telemetry.dataKind == DTEntityKind.Integer) ? telemetry.dataInteger : telemetry.dataDouble);
+                                    twinPatchData.AppendReplace($"/{propertyName}", (telemetry.dataKind == DTEntityKind.Integer) ? telemetry.dataInteger : telemetry.dataDouble);
                                 }
                                 else
                                 {
-                                    twinPatchData.AppendAdd($"/{telemetry.name}", (telemetry.dataKind == DTEntityKind.Integer) ? telemetry.dataInteger : telemetry.dataDouble);
+                                    twinPatchData.AppendAdd($"/{propertyName}", (telemetry.dataKind == DTEntityKind.Integer) ? telemetry.dataInteger : telemetry.dataDouble);
                                 }
 
                                 var updateResponse = await _adtClient.UpdateDigitalTwinAsync(parentTwin.Id, twinPatchData);
@@ -515,7 +526,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                         break;
 
                     case DTEntityKind.Integer:
-                        if (model[0].Name == "co2")
+                        if (model[0].Name == "co2" || model[0].Name == "e_co2") // For Seeed Wio Terminal & AtMark Armadillo
                         {
                             break;
                         }
@@ -530,33 +541,52 @@ namespace IoT_Plug_and_Play_Workshop_Functions
         private static TELEMETRY_DATA GetTelemetrydata(DTTelemetryInfo telemetryInfo, JObject signalRData, string model_id)
         {
             TELEMETRY_DATA data = null;
+            bool bFoundTelemetry = false;
             bool bFoundData = false;
             string semanticType = string.Empty;
 
             if ((telemetryInfo.Schema.EntityKind == DTEntityKind.Integer) || (telemetryInfo.Schema.EntityKind == DTEntityKind.Double))
             {
-                if ((telemetryInfo.SupplementalTypes.Count == 0) && model_id.StartsWith("dtmi:seeedkk:wioterminal:wioterminal_aziot_example"))
+                if (telemetryInfo.SupplementalTypes.Count == 0)
                 {
-                    if (telemetryInfo.Name.Equals("light"))
+                    // No semantics
+                    // Look for 
+                    // Wio Terminal : light
+                    // Wio Terminal : co2
+                    // Armadillo : co2
+                    // PaaD : battery
+
+                    if (model_id.StartsWith("dtmi:seeedkk:wioterminal:wioterminal_aziot_example"))
                     {
-                        semanticType = "dtmi:standard:class:Illuminance";
-                        bFoundData = true;
+                        if (telemetryInfo.Name.Equals("light"))
+                        {
+                            semanticType = "dtmi:standard:class:Illuminance";
+                            bFoundTelemetry = true;
+                        }
                     }
-                }
-                else if ((telemetryInfo.SupplementalTypes.Count == 0) && model_id.StartsWith("dtmi:seeedkk:wioterminal:wioterminal_co2checker"))
-                {
-                    if (telemetryInfo.Name.Equals("co2"))
+                    else if (model_id.StartsWith("dtmi:seeedkk:wioterminal:wioterminal_co2checker"))
                     {
-                        semanticType = "";
-                        bFoundData = true;
+                        if (telemetryInfo.Name.Equals("co2"))
+                        {
+                            semanticType = "";
+                            bFoundTelemetry = true;
+                        }
                     }
-                }
-                else if ((telemetryInfo.SupplementalTypes.Count == 0) && model_id.StartsWith("dtmi:azureiot:PhoneAsADevice"))
-                {
-                    if (telemetryInfo.Name.Equals("battery"))
+                    else if (model_id.StartsWith("dtmi:atmark_techno:Armadillo:IoT_GW_A6_EnvMonitor;1"))
                     {
-                        semanticType = "";
-                        bFoundData = true;
+                        if (telemetryInfo.Name.Equals("e_co2"))
+                        {
+                            semanticType = "";
+                            bFoundTelemetry = true;
+                        }
+                    }
+                    else if (model_id.StartsWith("dtmi:azureiot:PhoneAsADevice"))
+                    {
+                        if (telemetryInfo.Name.Equals("battery"))
+                        {
+                            semanticType = "";
+                            bFoundTelemetry = true;
+                        }
                     }
                 }
                 else
@@ -567,21 +597,21 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                         //if ((supplementalType.Versionless.Equals("dtmi:standard:class:Temperature")) ||
                         //(supplementalType.Versionless.Equals("dtmi:standard:class:Illuminance")))
                         {
-                            bFoundData = true;
+                            bFoundTelemetry = true;
                             semanticType = supplementalType.Versionless;
                             break;
                         }
                     }
                 }
 
-                if (bFoundData)
+                if (bFoundTelemetry)
                 {
-                    data = new TELEMETRY_DATA();
-                    data.dataKind = telemetryInfo.Schema.EntityKind;
-                    data.name = telemetryInfo.Name;
-
-                    if (signalRData[telemetryInfo.Name] != null)
+                    // make sure payload includes data for this telemetry
+                    if (signalRData.ContainsKey(telemetryInfo.Name))
                     {
+                        data = new TELEMETRY_DATA();
+                        data.dataKind = telemetryInfo.Schema.EntityKind;
+                        data.name = telemetryInfo.Name;
                         if (data.dataKind == DTEntityKind.Integer)
                         {
                             data.dataInteger = (long)signalRData[telemetryInfo.Name];
@@ -590,9 +620,10 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                         {
                             data.dataDouble = (double)signalRData[telemetryInfo.Name];
                         }
+                        data.dataName = telemetryInfo.Name;
+                        data.semanticType = semanticType;
+                        data.telmetryInterfaceId = telemetryInfo.ChildOf.AbsoluteUri;
                     }
-                    data.dataName = telemetryInfo.Name;
-                    data.semanticType = semanticType;
                 }
             }
 
@@ -633,6 +664,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
             public double dataDouble { get; set; }
             public double dataInteger { get; set; }
             public string name { get; set; }
+            public string telmetryInterfaceId { get; set; }
         }
 
         public class SIGNALR_DATA
