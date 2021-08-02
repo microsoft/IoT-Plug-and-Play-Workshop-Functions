@@ -358,6 +358,37 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                             _logger.LogError($"Failed to remove relationship between {roomId} and {deviceId}");
                         }
                     }
+                    else if (!roomId.Equals("0") && parentTwins.Count == 1)
+                    {
+                        // There is an existing relationship
+                        // 1. Check if the relationship exists or not.
+                        // 2. If the existing relationship does not match to the specified room, remove existing one and create one.
+
+                        var roomTwin = await FindDigitalTwin(roomId, "dtmi:com:example:Room;2");
+                        bool bRet = false;
+
+                        if (roomTwin.Id.Equals(roomId))
+                        {
+                            // same room to device relationship
+                            // nothing to do
+                        }
+                        else
+                        {
+                            // remove existing relationship
+                            bRet = await RemoveRoom2DeviceRelationship(deviceId);
+
+                            if (bRet == false)
+                            {
+                                _logger.LogError($"Failed to remove relationship between {roomTwin.Id} and {deviceId}");
+                            }
+                            else
+                            {
+                                bRet = await SetRoomOccupiedValue(roomTwin, false);
+
+                                bRet = await CreateRoom2DeviceRelationship(roomId, dtDevice);
+                            }
+                        }
+                    }
                 }
             }
         }
