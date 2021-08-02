@@ -223,22 +223,22 @@ namespace IoT_Plug_and_Play_Workshop_Functions
             return roomId;
         }
 
-        private static async Task<bool> SetRoomOccupiedValue(BasicDigitalTwin roomTwin, bool occipied)
+        private static async Task<bool> SetRoomOccupiedValue(BasicDigitalTwin roomTwin, bool occupied)
         {
             var propertyName = "occupied";
             var twinPatchData = new JsonPatchDocument();
 
             if (roomTwin.Contents.ContainsKey(propertyName))
             {
-                twinPatchData.AppendReplace($"/{propertyName}", occipied);
+                twinPatchData.AppendReplace($"/{propertyName}", occupied);
             }
             else
             {
-                twinPatchData.AppendAdd($"/{propertyName}", occipied);
+                twinPatchData.AppendAdd($"/{propertyName}", occupied);
             }
 
             var response = await _adtClient.UpdateDigitalTwinAsync(roomTwin.Id, twinPatchData);
-            _logger.LogInformation($"Updated Digital Twin 'occupied for {roomTwin.Id} to {occipied}");
+            _logger.LogInformation($"Updated Digital Twin 'occupied for {roomTwin.Id} to {occupied}");
 
             return ((response.Status < 200 || response.Status > 299)) ? false : true;
         }

@@ -149,8 +149,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                             {
                                 if ((operation["path"].ToString() == "/temperature") ||
                                     (operation["path"].ToString() == "/light") ||
-                                    (operation["path"].ToString() == "/co2") ||
-                                    (operation["path"].ToString() == "/occupied")
+                                    (operation["path"].ToString() == "/co2")
                                     )
                                 {
                                     string opValue = operation["op"].ToString();
@@ -171,6 +170,41 @@ namespace IoT_Plug_and_Play_Workshop_Functions
 
                                         log.LogInformation(await response.Content.ReadAsStringAsync());
                                     }
+                                }
+                                else if (operation["path"].ToString() == "/occupied")
+                                {
+                                    HttpResponseMessage response;
+                                    string opValue = operation["op"].ToString();
+
+                                    if (opValue.Equals("replace") || opValue.Equals("add"))
+                                    {   //Update the maps feature stateset
+
+                                        if (operation["value"].ToString().ToLower().Equals("false"))
+                                        {
+                                            response = await _httpClient.DeleteAsync(
+                                                $"https://us.atlas.microsoft.com/featureStateSets/{_mapStatesetId}/featureStates/{featureId}?api-version=2.0&subscription-key={_mapKey}&stateKeyName=occupied"
+                                                );
+                                        }
+                                        else
+                                        {
+                                            var postcontent = new JObject(new JProperty("States", new JArray(
+                                                new JObject(new JProperty("keyName", operation["path"].ToString().Replace("/", "")),
+                                                     new JProperty("value", operation["value"].ToString()),
+                                                     new JProperty("eventTimestamp", DateTime.Now.ToString("s"))))));
+
+                                            log.LogInformation($"Updating Map Unit v2 {featureId} {operation["path"].ToString()} to {operation["value"].ToString()}");
+
+                                            response = await _httpClient.PutAsync(
+                                                $"https://us.atlas.microsoft.com/featureStateSets/{_mapStatesetId}/featureStates/{featureId}?api-version=2.0&subscription-key={_mapKey}",
+                                                new StringContent(postcontent.ToString()));
+
+                                        }
+
+                                        log.LogInformation(await response.Content.ReadAsStringAsync());
+
+                                    }
+
+
                                 }
                             }
                         }
