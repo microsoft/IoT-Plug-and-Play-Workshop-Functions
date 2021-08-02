@@ -149,7 +149,9 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                             {
                                 if ((operation["path"].ToString() == "/temperature") ||
                                     (operation["path"].ToString() == "/light") ||
-                                    (operation["path"].ToString() == "/co2"))
+                                    (operation["path"].ToString() == "/co2") ||
+                                    (operation["path"].ToString() == "/occupied")
+                                    )
                                 {
                                     string opValue = operation["op"].ToString();
                                     log.LogInformation($"Found {operation["path"].ToString().Replace("/", "")} : {operation["op"].ToString()}");
