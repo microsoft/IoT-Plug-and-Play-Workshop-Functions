@@ -223,67 +223,139 @@ namespace IoT_Plug_and_Play_Workshop_Functions
             return roomId;
         }
 
+        private static async Task<bool> SetRoomOccupiedValue(BasicDigitalTwin roomTwin, bool occipied)
+        {
+            var propertyName = "occupied";
+            var twinPatchData = new JsonPatchDocument();
+
+            if (roomTwin.Contents.ContainsKey(propertyName))
+            {
+                twinPatchData.AppendReplace($"/{propertyName}", occipied);
+            }
+            else
+            {
+                twinPatchData.AppendAdd($"/{propertyName}", occipied);
+            }
+
+            var response = await _adtClient.UpdateDigitalTwinAsync(roomTwin.Id, twinPatchData);
+            _logger.LogInformation($"Updated Digital Twin 'occupied for {roomTwin.Id} to {occipied}");
+
+            return ((response.Status < 200 || response.Status > 299)) ? false : true;
+        }
+
+        private static async Task<bool> RemoveRoom2DeviceRelationship(string deviceId)
+        {
+            AsyncPageable<IncomingRelationship> incomingRelationships = _adtClient.GetIncomingRelationshipsAsync(deviceId);
+
+            await foreach (IncomingRelationship incomingRelationship in incomingRelationships)
+            {
+                _logger.LogInformation($"Found an incoming relationship '{incomingRelationship.RelationshipId}' from '{incomingRelationship.SourceId}'.");
+
+                var response = await _adtClient.DeleteRelationshipAsync(incomingRelationship.SourceId, incomingRelationship.RelationshipId);
+
+                if (response.Status < 200 || response.Status > 299)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        private static async Task<bool> CreateRoom2DeviceRelationship(string roomId, BasicDigitalTwin deviceTwin)
+        {
+            bool bRet = true;
+
+            var roomTwin = await FindDigitalTwin(roomId, "dtmi:com:example:Room;2");
+
+            if (roomTwin != null)
+            {
+                // Creating a relationship
+                var buildingFloorRelationshipPayload = new BasicRelationship
+                {
+                    Id = $"Room_{deviceTwin.Id}",
+                    SourceId = roomTwin.Id,
+                    TargetId = deviceTwin.Id,
+                    Name = "contains",
+                };
+
+                Response<BasicRelationship> response = await _adtClient
+                    .CreateOrReplaceRelationshipAsync<BasicRelationship>(roomTwin.Id, $"Room_{deviceTwin.Id}", buildingFloorRelationshipPayload);
+
+                if (response.GetRawResponse().Status == 200)
+                {
+                    // Relationship created.
+                    // Set occupied to tru
+                    bRet = await SetRoomOccupiedValue(roomTwin, true);
+                }
+            }
+
+            return bRet;
+        }
         // Process Device Twin Change Event
         // Add filtering etc as needed
         // leave signalrData.data to null if we do not want to send SignalR message
         private static async Task OnDeviceTwinChanged(SIGNALR_DATA signalrData, EventData eventData)
         {
             string deviceId = eventData.SystemProperties["iothub-connection-device-id"].ToString();
-            BasicDigitalTwin digitalTwin = null;
+            BasicDigitalTwin dtDevice = null;
             _logger.LogInformation($"OnDeviceTwinChanged");
             signalrData.data = Encoding.UTF8.GetString(eventData.Body.Array, eventData.Body.Offset, eventData.Body.Count);
 
-            digitalTwin = await FindDigitalTwin(deviceId, string.Empty);
+            dtDevice = await FindDigitalTwin(deviceId, string.Empty);
 
-            if (digitalTwin != null)
+            if (dtDevice != null)
             {
                 //Found Digital Twin for this device
-                _logger.LogInformation($"Found Twin");
-
-                if (digitalTwin.Metadata.ModelId.StartsWith("dtmi:azureiot:PhoneAsADevice"))
+                if (dtDevice.Metadata.ModelId.StartsWith("dtmi:azureiot:PhoneAsADevice"))
                 {
                     List<BasicDigitalTwin> parentTwins = await FindParentAsync(_adtClient, deviceId, "contains");
+                    var roomId = GetRoomIdInPayload(signalrData);
 
-                    if (parentTwins.Count == 0)
+                    if (string.IsNullOrEmpty(roomId))
                     {
-                        var roomId = GetRoomIdInPayload(signalrData);
-                        if (!string.IsNullOrEmpty(roomId))
-                        {
-                            var roomTwin = await FindDigitalTwin(roomId, "dtmi:com:example:Room;2");
-
-                            if (roomTwin != null)
-                            {
-                                // Creating a relationship
-                                var buildingFloorRelationshipPayload = new BasicRelationship
-                                {
-                                    Id = $"Room_{deviceId}",
-                                    SourceId = roomTwin.Id,
-                                    TargetId = digitalTwin.Id,
-                                    Name = "contains",
-                                };
-
-                                Response<BasicRelationship> createBuildingFloorRelationshipResponse = await _adtClient
-                                    .CreateOrReplaceRelationshipAsync<BasicRelationship>(roomTwin.Id, $"Room_{deviceId}", buildingFloorRelationshipPayload);
-
-                                _logger.LogInformation("Test");
-                            }
-                        }
+                        // nothing to do
+                    }
+                    else if (parentTwins.Count > 1)
+                    {
+                        // Multiple parents.
+                        // Not supported
+                        _logger.LogWarning($"Found {parentTwins.Count} parents for {deviceId}.  Not supported");
 
                     }
-                    else if (parentTwins.Count == 1)
+                    else if (roomId.Equals("0") && parentTwins.Count == 0)
                     {
-                        var roomId = GetRoomIdInPayload(signalrData);
+                        // Room Id = 0 (Remove) but no parent.
+                        // Nothing to do
+                    }
+                    else if (roomId.Equals("0") && parentTwins.Count == 1)
+                    {
+                        // Has a room parent and user specified room number 0
+                        // 1. Remove the exisiting relationship
+                        // 2. Set 'occupied' property to false
 
-                        if (roomId == "0")
+                        var bRet = await RemoveRoom2DeviceRelationship(deviceId);
+
+                        if (bRet == false)
                         {
-                            AsyncPageable<IncomingRelationship> incomingRelationships = _adtClient.GetIncomingRelationshipsAsync(deviceId);
+                            _logger.LogError($"Failed to remove relationship between {roomId} and {deviceId}");
+                        }
+                        else
+                        {
+                            bRet = await SetRoomOccupiedValue(parentTwins[0], false);
+                        }
+                    }
+                    else if (!roomId.Equals("0") && parentTwins.Count == 0)
+                    {
+                        // Do not have a room parent and user specified room number 0
+                        // 1. Create a new relationship
+                        // 2. Set 'occupied' property to true
 
-                            await foreach (IncomingRelationship incomingRelationship in incomingRelationships)
-                            {
-                                Console.WriteLine($"Found an incoming relationship '{incomingRelationship.RelationshipId}' from '{incomingRelationship.SourceId}'.");
+                        var bRet = await CreateRoom2DeviceRelationship(roomId, dtDevice);
 
-                                var response = await _adtClient.DeleteRelationshipAsync(incomingRelationship.SourceId, incomingRelationship.RelationshipId);
-                            }
+                        if (bRet == false)
+                        {
+                            _logger.LogError($"Failed to remove relationship between {roomId} and {deviceId}");
                         }
                     }
                 }
@@ -364,8 +436,6 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                 JObject signalRData = JObject.Parse(signalrData.data);
 
                 //List<KeyValuePair<Dtmi, DTEntityInfo>> dtComponentList = parsedModel.Where(r => r.Value.EntityKind == DTEntityKind.Component).ToList();
-
-
 
                 List<KeyValuePair<Dtmi, DTEntityInfo>> dtTelemetryList = parsedModel.Where(r => r.Value.EntityKind == DTEntityKind.Telemetry).ToList();
 
@@ -542,7 +612,6 @@ namespace IoT_Plug_and_Play_Workshop_Functions
         {
             TELEMETRY_DATA data = null;
             bool bFoundTelemetry = false;
-            bool bFoundData = false;
             string semanticType = string.Empty;
 
             if ((telemetryInfo.Schema.EntityKind == DTEntityKind.Integer) || (telemetryInfo.Schema.EntityKind == DTEntityKind.Double))
