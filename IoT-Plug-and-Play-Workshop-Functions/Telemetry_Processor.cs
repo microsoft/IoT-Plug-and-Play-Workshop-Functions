@@ -28,6 +28,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
         private static DigitalTwinsClient _adtClient = null;
         private static ILogger _logger = null;
         private static DeviceModelResolver _resolver = null;
+        private static List<PHONE_POSE_DATA> phonePoseList = new List<PHONE_POSE_DATA>();
 
         [FunctionName("Telemetry_Processor")]
         public static async Task Run([EventHubTrigger("devicetelemetryhub", ConsumerGroup = "telemetry-functions-cg", Connection = "EVENTHUB_CS")] EventData[] eventData,
@@ -478,7 +479,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                 {
                     DTTelemetryInfo dtTelemetryInfo = dtTelemetry.Value as DTTelemetryInfo;
 
-                    var telemetryData = GetTelemetrydata(dtTelemetryInfo, signalRData, dtmi);
+                    var telemetryData = GetTelemetrydataForDigitalTwinProperty(dtTelemetryInfo, signalRData, dtmi);
                     if (telemetryData != null)
                     {
                         tdList.Add(telemetryData);
@@ -509,13 +510,39 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                             foreach (var parentTwin in parentTwins)
                             {
                                 // loop through parents
-                                if (parentTwin.Contents.ContainsKey(propertyName))
+                                if (telemetry.telmetryInterfaceId.StartsWith("dtmi:azureiot:PhoneSensors"))
                                 {
-                                    twinPatchData.AppendReplace($"/{propertyName}", (telemetry.dataKind == DTEntityKind.Integer) ? telemetry.dataInteger : telemetry.dataDouble);
+                                    PHONE_POSE_DATA phoneDataListItem = phonePoseList.Find(x => x.deviceId == deviceId);
+
+                                    var upDown = (telemetry.dataDouble > 0) ? PHONE_POSE_UP_DOWN.Up : PHONE_POSE_UP_DOWN.Down;
+
+                                    if (phoneDataListItem == null)
+                                    {
+                                        phoneDataListItem = new PHONE_POSE_DATA();
+                                        phoneDataListItem.deviceId = deviceId;
+                                        phoneDataListItem.pose = PHONE_POSE_UP_DOWN.Unkonwn;
+                                        phonePoseList.Add(phoneDataListItem);
+
+                                    }
+
+                                    if (phoneDataListItem.pose != upDown)
+                                    {
+                                        // Update Digital Twin
+                                        await SetRoomOccupiedValue(parentTwin, upDown == PHONE_POSE_UP_DOWN.Up ? true : false);
+                                    }
+
+                                    phoneDataListItem.pose = upDown;
                                 }
                                 else
                                 {
-                                    twinPatchData.AppendAdd($"/{propertyName}", (telemetry.dataKind == DTEntityKind.Integer) ? telemetry.dataInteger : telemetry.dataDouble);
+                                    if (parentTwin.Contents.ContainsKey(propertyName))
+                                    {
+                                        twinPatchData.AppendReplace($"/{propertyName}", (telemetry.dataKind == DTEntityKind.Integer) ? telemetry.dataInteger : telemetry.dataDouble);
+                                    }
+                                    else
+                                    {
+                                        twinPatchData.AppendAdd($"/{propertyName}", (telemetry.dataKind == DTEntityKind.Integer) ? telemetry.dataInteger : telemetry.dataDouble);
+                                    }
                                 }
 
                                 var updateResponse = await _adtClient.UpdateDigitalTwinAsync(parentTwin.Id, twinPatchData);
@@ -582,6 +609,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                 case DTEntityKind.String:
                 case DTEntityKind.Integer:
                 case DTEntityKind.Float:
+                case DTEntityKind.Double:
                     break;
                 default:
                     _logger.LogInformation($"Unsupported DTEntry Kind {entryKind.ToString()}");
@@ -639,13 +667,13 @@ namespace IoT_Plug_and_Play_Workshop_Functions
             }
         }
 
-        private static TELEMETRY_DATA GetTelemetrydata(DTTelemetryInfo telemetryInfo, JObject signalRData, string model_id)
+        private static TELEMETRY_DATA GetTelemetrydataForDigitalTwinProperty(DTTelemetryInfo telemetryInfo, JObject signalRData, string model_id)
         {
             TELEMETRY_DATA data = null;
             bool bFoundTelemetry = false;
             string semanticType = string.Empty;
 
-            if ((telemetryInfo.Schema.EntityKind == DTEntityKind.Integer) || (telemetryInfo.Schema.EntityKind == DTEntityKind.Double))
+            if ((telemetryInfo.Schema.EntityKind == DTEntityKind.Integer) || (telemetryInfo.Schema.EntityKind == DTEntityKind.Double) || (telemetryInfo.Schema.EntityKind == DTEntityKind.Float))
             {
                 if (telemetryInfo.SupplementalTypes.Count == 0)
                 {
@@ -726,9 +754,59 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                     }
                 }
             }
+            else if (telemetryInfo.Schema.EntityKind == DTEntityKind.Object)
+            {
+                if (model_id.StartsWith("dtmi:azureiot:PhoneAsADevice"))
+                {
+                    // we are interested in accelerometer z to determine face up or down.
+                    if (telemetryInfo.Name.Equals("accelerometer") && signalRData.ContainsKey(telemetryInfo.Name))
+                    {
+                        JObject accelerometerData = (JObject)signalRData[telemetryInfo.Name];
+
+                        DTObjectInfo dtObject = telemetryInfo.Schema as DTObjectInfo;
+
+                        foreach (var dtObjFeild in dtObject.Fields)
+                        {
+                            if (dtObjFeild.Id.AbsoluteUri.StartsWith("dtmi:iotcentral:schema:vector") && dtObjFeild.Name.Equals("z"))
+                            {
+                                if (accelerometerData.ContainsKey(dtObjFeild.Name))
+                                {
+                                    data = new TELEMETRY_DATA();
+                                    data.dataKind = telemetryInfo.Schema.EntityKind;
+                                    data.name = $"{telemetryInfo.Name}.{dtObjFeild.Name}";
+                                    data.dataDouble = (double)accelerometerData[dtObjFeild.Name];
+                                    data.dataName = $"{telemetryInfo.Name}.{dtObjFeild.Name}";
+                                    data.semanticType = "";
+                                    data.telmetryInterfaceId = telemetryInfo.ChildOf.AbsoluteUri;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    //else if (telemetryInfo.Name.Equals("gyroscope") && signalRData.ContainsKey(telemetryInfo.Name))
+                    //{
+                    //    JObject gyroData = (JObject)signalRData[telemetryInfo.Name];
+
+                    //    DTObjectInfo dtObject = telemetryInfo.Schema as DTObjectInfo;
+
+                    //    foreach (var dtObjFeild in dtObject.Fields)
+                    //    {
+                    //        if (dtObjFeild.Id.AbsoluteUri.StartsWith("dtmi:iotcentral:schema:vector") && dtObjFeild.Name.Equals("z"))
+                    //        {
+
+                    //            if (gyroData.ContainsKey(dtObjFeild.Name))
+                    //            {
+                    //                _logger.LogInformation($"!!!! Found Gyro Z {gyroData[dtObjFeild.Name]}");
+                    //            }
+                    //        }
+                    //    }
+                    //}
+                }
+            }
 
             return data;
         }
+
         private static async Task<List<BasicDigitalTwin>> FindParentAsync(DigitalTwinsClient client, string child, string relname)
         {
             List<BasicDigitalTwin> twins = new List<BasicDigitalTwin>();
@@ -776,6 +854,19 @@ namespace IoT_Plug_and_Play_Workshop_Functions
             public string eventTime { get; set; }
             public string data { get; set; }
             public string dtDataSchema { get; set; }
+        }
+
+        public enum PHONE_POSE_UP_DOWN
+        {
+            Down,
+            Up,
+            Unkonwn
+        }
+
+        public class PHONE_POSE_DATA
+        {
+            public string deviceId { get; set; }
+            public PHONE_POSE_UP_DOWN pose { get; set; }
         }
     }
 

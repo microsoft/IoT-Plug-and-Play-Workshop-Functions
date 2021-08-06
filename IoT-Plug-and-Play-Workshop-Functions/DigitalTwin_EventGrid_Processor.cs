@@ -173,19 +173,19 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                                 }
                                 else if (operation["path"].ToString() == "/occupied")
                                 {
-                                    HttpResponseMessage response;
+                                    HttpResponseMessage response = null;
                                     string opValue = operation["op"].ToString();
 
                                     if (opValue.Equals("replace") || opValue.Equals("add"))
                                     {   //Update the maps feature stateset
 
-                                        if (operation["value"].ToString().ToLower().Equals("false"))
-                                        {
-                                            response = await _httpClient.DeleteAsync(
-                                                $"https://us.atlas.microsoft.com/featureStateSets/{_mapStatesetId}/featureStates/{featureId}?api-version=2.0&subscription-key={_mapKey}&stateKeyName=occupied"
-                                                );
-                                        }
-                                        else
+                                        //if (operation["value"].ToString().ToLower().Equals("false"))
+                                        //{
+                                        //    response = await _httpClient.DeleteAsync(
+                                        //        $"https://us.atlas.microsoft.com/featureStateSets/{_mapStatesetId}/featureStates/{featureId}?api-version=2.0&subscription-key={_mapKey}&stateKeyName=occupied"
+                                        //        );
+                                        //}
+                                        //else
                                         {
                                             var postcontent = new JObject(new JProperty("States", new JArray(
                                                 new JObject(new JProperty("keyName", operation["path"].ToString().Replace("/", "")),
