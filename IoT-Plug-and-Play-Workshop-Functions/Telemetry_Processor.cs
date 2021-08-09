@@ -254,6 +254,9 @@ namespace IoT_Plug_and_Play_Workshop_Functions
 
         private static async Task<bool> RemoveRoom2DeviceRelationship(string deviceId)
         {
+
+            _logger.LogInformation($"Removing Relationship {deviceId}");
+
             AsyncPageable<IncomingRelationship> incomingRelationships = _adtClient.GetIncomingRelationshipsAsync(deviceId);
 
             await foreach (IncomingRelationship incomingRelationship in incomingRelationships)
@@ -525,7 +528,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                 {
                     foreach (var telemetry in tdList)
                     {
-                        _logger.LogInformation($"Telemetry {telemetry.name} data : {telemetry.dataDouble}/{telemetry.dataInteger}");
+                        // _logger.LogInformation($"Telemetry {telemetry.name} data : {telemetry.dataDouble}/{telemetry.dataInteger}");
                         var propertyName = string.Empty;
 
                         if (telemetry.telmetryInterfaceId.Contains("dtmi:atmark_techno:Armadillo:EnvSensor") && telemetry.name.Equals("e_co2"))
@@ -580,7 +583,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                                 }
 
                                 var updateResponse = await _adtClient.UpdateDigitalTwinAsync(parentTwin.Id, twinPatchData);
-                                _logger.LogInformation($"ADT Response : {updateResponse.Status}");
+                                // _logger.LogInformation($"ADT Response : {updateResponse.Status}");
 
                                 //if (string.IsNullOrEmpty(componentName))
                                 //{
