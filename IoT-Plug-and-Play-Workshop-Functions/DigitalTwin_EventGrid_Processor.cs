@@ -177,7 +177,35 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                                     string opValue = operation["op"].ToString();
 
                                     if (opValue.Equals("replace") || opValue.Equals("add"))
-                                    {   //Update the maps feature stateset
+                                    {
+                                        //Update the maps feature stateset
+                                        // Make sure relationship exists with a device
+                                        bool bFoundRel = false;
+
+                                        try
+                                        {
+                                            string sourceId = string.Empty;
+                                            AsyncPageable<BasicRelationship> rels = _adtClient.GetRelationshipsAsync<BasicRelationship>(twinId);
+
+                                            await foreach (BasicRelationship rel in rels)
+                                            {
+                                                if (rel.Name.Equals("contains"))
+                                                {
+                                                    Response<BasicDigitalTwin> targetTwin = await _adtClient.GetDigitalTwinAsync<BasicDigitalTwin>(rel.TargetId);
+
+                                                    if (targetTwin.Value.Metadata.ModelId.Contains("dtmi:azureiot:PhoneAsADevice"))
+                                                    {
+                                                        bFoundRel = true;
+                                                        break;
+                                                    }
+                                                    
+                                                }
+                                            }
+                                        }
+                                        catch (RequestFailedException e)
+                                        {
+                                            log.LogError($"Error GetRelationshipAsync/GetDigitalTwinAsync() :{e.Status}:{e.Message}");
+                                        }
 
                                         //if (operation["value"].ToString().ToLower().Equals("false"))
                                         //{
@@ -186,6 +214,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                                         //        );
                                         //}
                                         //else
+                                        if (bFoundRel)
                                         {
                                             var postcontent = new JObject(new JProperty("States", new JArray(
                                                 new JObject(new JProperty("keyName", operation["path"].ToString().Replace("/", "")),

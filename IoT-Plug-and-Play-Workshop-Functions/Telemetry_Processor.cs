@@ -395,7 +395,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                         }
                         else
                         {
-                            bRet = await SetRoomOccupiedValue(parentTwins[0], false);
+                            //bRet = await SetRoomOccupiedValue(parentTwins[0], false);
                         }
                     }
                     else if (!roomId.Equals("0") && parentTwins.Count == 0)
@@ -868,7 +868,6 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                     }
                 }
             }
-//            catch (
             catch (RequestFailedException e)
             {
                 _logger.LogError($"Error FindParentAsync() :{e.Status}:{e.Message}");
