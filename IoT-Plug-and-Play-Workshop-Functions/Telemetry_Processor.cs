@@ -302,6 +302,14 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                 {
                     return false;
                 }
+
+                // remove from cache
+                PHONE_POSE_DATA phoneDataListItem = phonePoseList.Find(x => x.deviceId == deviceId);
+
+                if (phoneDataListItem != null)
+                {
+                    phonePoseList.Remove(phoneDataListItem);
+                }
             }
 
             return true;
