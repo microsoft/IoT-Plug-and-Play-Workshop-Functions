@@ -96,7 +96,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
             List<string> resolvedModels = new List<string>();
             foreach (var dtmi in dtmis)
             {
-                _logger.LogInformation($"Resolving {dtmi.AbsoluteUri}");
+                //_logger.LogInformation($"Resolving {dtmi.AbsoluteUri}");
                 var dtmiPath = DtmiToPath(dtmi.AbsoluteUri);
                 string dtmiContent = await GetModelContentAsync(dtmiPath, _modelRepoUrl);
                 resolvedModels.Add(dtmiContent);

@@ -24,6 +24,9 @@ namespace IoT_Plug_and_Play_Workshop_Functions
         private static readonly string _adtHostUrl = Environment.GetEnvironmentVariable("ADT_HOST_URL");
         private static readonly string _modelRepoUrl = Environment.GetEnvironmentVariable("PRIVATE_MODEL_REPOSIROTY_URL");
         private static readonly string _gitToken = Environment.GetEnvironmentVariable("PRIVATE_MODEL_REPOSIROTY_TOKEN");
+        private static string _mapKey = Environment.GetEnvironmentVariable("MAP_KEY");
+        private static string _mapStatesetId = Environment.GetEnvironmentVariable("MAP_STATESET_ID");
+        private static string _mapDatasetId = Environment.GetEnvironmentVariable("MAP_DATASET_ID");
         private static readonly HttpClient _httpClient = new HttpClient();
         private static DigitalTwinsClient _adtClient = null;
         private static ILogger _logger = null;
@@ -133,7 +136,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                 throw exceptions.Single();
         }
 
-        private static async Task<BasicDigitalTwin> FindDigitalTwin(string deviceId, string dtmi)
+        private static async Task<BasicDigitalTwin> FindDigitalTwin(string dtId, string dtmi)
         {
             BasicDigitalTwin twin = null;
 
@@ -171,11 +174,11 @@ namespace IoT_Plug_and_Play_Workshop_Functions
 
                     if (string.IsNullOrEmpty(dtmi))
                     {
-                        query = $"SELECT * FROM DigitalTwins T WHERE $dtId = '{deviceId}'";
+                        query = $"SELECT * FROM DigitalTwins T WHERE $dtId = '{dtId}'";
                     }
                     else
                     {
-                        query = $"SELECT * FROM DigitalTwins T WHERE $dtId = '{deviceId}' AND IS_OF_MODEL('{dtmi}')";
+                        query = $"SELECT * FROM DigitalTwins T WHERE $dtId = '{dtId}' AND IS_OF_MODEL('{dtmi}')";
                     }
 
                     // Make sure digital twin node exist for this device
@@ -183,11 +186,16 @@ namespace IoT_Plug_and_Play_Workshop_Functions
 
                     await foreach (BasicDigitalTwin dt in asyncPageableResponse)
                     {
-                        if (dt.Id == deviceId)
+                        if (dt.Id == dtId)
                         {
                             twin = dt;
                             break;
                         }
+                    }
+
+                    if (twin == null)
+                    {
+                        _logger.LogWarning($"Did not find DT {dtId}");
                     }
                 }
                 catch (Exception e)
@@ -216,7 +224,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                     {
                         _logger.LogInformation($"Found PaaD");
 
-                        roomId = twinReported["readOnlyProp"].ToString();
+                        roomId = twinReported["readOnlyProp"].ToString().Trim();
                     }
                 }
             }
@@ -252,9 +260,42 @@ namespace IoT_Plug_and_Play_Workshop_Functions
             {
                 _logger.LogInformation($"Found an incoming relationship '{incomingRelationship.RelationshipId}' from '{incomingRelationship.SourceId}'.");
 
-                var response = await _adtClient.DeleteRelationshipAsync(incomingRelationship.SourceId, incomingRelationship.RelationshipId);
+                // Reset map state
+                // Get Feature ID (Unit)
 
-                if (response.Status < 200 || response.Status > 299)
+                var featureId = string.Empty;
+
+                // Make sure digital twin node exist for this device
+                Response<BasicDigitalTwin> roomTwin = await _adtClient.GetDigitalTwinAsync<BasicDigitalTwin>(incomingRelationship.SourceId);
+
+                if (roomTwin == null)
+                {
+                    // this should not happen
+                    _logger.LogError($"Digital Twin for {incomingRelationship.SourceId} not found");
+                    return false;
+                }
+
+                _logger.LogInformation($"Found Room Twin {roomTwin.Value.Id}");
+
+                // Check if unitid is already set or not
+                if (roomTwin.Value.Contents.ContainsKey("unitId"))
+                {
+                    featureId = roomTwin.Value.Contents["unitId"].ToString();
+                    _logger.LogInformation($"Found Unit ID {featureId}");
+
+                    var response = await _httpClient.DeleteAsync(
+                        $"https://us.atlas.microsoft.com/featureStateSets/{_mapStatesetId}/featureStates/{featureId}?api-version=2.0&subscription-key={_mapKey}&stateKeyName=occupied"
+                        );
+                }
+
+                //if (response.StatusCode < 200 || response.StatusCode > 299)
+                //{
+                //    return false;
+                //}
+
+                var adtResponse = await _adtClient.DeleteRelationshipAsync(incomingRelationship.SourceId, incomingRelationship.RelationshipId);
+
+                if (adtResponse.Status < 200 || adtResponse.Status > 299)
                 {
                     return false;
                 }
@@ -265,9 +306,11 @@ namespace IoT_Plug_and_Play_Workshop_Functions
 
         private static async Task<bool> CreateRoom2DeviceRelationship(string roomId, BasicDigitalTwin deviceTwin)
         {
-            bool bRet = true;
+            bool bRet = false;
 
             var roomTwin = await FindDigitalTwin(roomId, "dtmi:com:example:Room;2");
+
+            //roomTwin = await FindDigitalTwin(roomId, string.Empty);
 
             if (roomTwin != null)
             {
@@ -287,7 +330,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                 {
                     // Relationship created.
                     // Set occupied to tru
-                    bRet = await SetRoomOccupiedValue(roomTwin, true);
+                    // bRet = await SetRoomOccupiedValue(roomTwin, true);
                 }
             }
 
@@ -356,7 +399,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
 
                         if (bRet == false)
                         {
-                            _logger.LogError($"Failed to remove relationship between {roomId} and {deviceId}");
+                            _logger.LogError($"Failed to create a relationship between {roomId} and {deviceId}");
                         }
                     }
                     else if (!roomId.Equals("0") && parentTwins.Count == 1)
@@ -365,29 +408,19 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                         // 1. Check if the relationship exists or not.
                         // 2. If the existing relationship does not match to the specified room, remove existing one and create one.
 
-                        var roomTwin = await FindDigitalTwin(roomId, "dtmi:com:example:Room;2");
                         bool bRet = false;
 
-                        if (roomTwin.Id.Equals(roomId))
+                        if (!roomId.Equals(parentTwins[0].Id))
                         {
-                            // same room to device relationship
-                            // nothing to do
-                        }
-                        else
-                        {
-                            // remove existing relationship
+                            // A different room.  Remove existing relation
                             bRet = await RemoveRoom2DeviceRelationship(deviceId);
 
                             if (bRet == false)
                             {
-                                _logger.LogError($"Failed to remove relationship between {roomTwin.Id} and {deviceId}");
+                                _logger.LogError($"Failed to remove relationship between {roomId} and {deviceId}");
                             }
-                            else
-                            {
-                                bRet = await SetRoomOccupiedValue(roomTwin, false);
 
-                                bRet = await CreateRoom2DeviceRelationship(roomId, dtDevice);
-                            }
+                            bRet = await CreateRoom2DeviceRelationship(roomId, dtDevice);
                         }
                     }
                 }
@@ -594,7 +627,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
         }
         private static void ProcessInterface(SIGNALR_DATA signalrData, IReadOnlyDictionary<Dtmi, DTEntityInfo> parsedModel, DTEntityKind entryKind, string keyName, Dtmi keyId, JToken jsonData)
         {
-            _logger.LogInformation($"Key ID {keyId} kind {entryKind.ToString()} Value {jsonData}");
+           // _logger.LogInformation($"Key ID {keyId} kind {entryKind.ToString()} Value {jsonData}");
 
             switch (entryKind)
             {
@@ -623,12 +656,12 @@ namespace IoT_Plug_and_Play_Workshop_Functions
 
             if (model.Count == 1)
             {
-                _logger.LogInformation($"Key {keyName} Value {jsonData}");
+                //_logger.LogInformation($"Key {keyName} Value {jsonData}");
 
                 switch (model[0].Schema.EntityKind)
                 {
                     case DTEntityKind.Object:
-                        _logger.LogInformation($"Object");
+                        //_logger.LogInformation($"Object");
 
                         var objectFields = model[0].Schema as DTObjectInfo;
                         foreach (var field in objectFields.Fields)
@@ -638,7 +671,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                         break;
 
                     case DTEntityKind.Enum:
-                        _logger.LogInformation($"Enum");
+                        //_logger.LogInformation($"Enum");
                         var enumEntry = model[0].Schema as DTEnumInfo;
                         JObject signalRData = JObject.Parse(signalrData.data);
                         var value = signalRData[keyName].ToObject<int>();

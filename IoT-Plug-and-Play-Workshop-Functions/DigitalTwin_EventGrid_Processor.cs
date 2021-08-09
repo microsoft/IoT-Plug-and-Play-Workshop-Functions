@@ -203,8 +203,6 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                                         log.LogInformation(await response.Content.ReadAsStringAsync());
 
                                     }
-
-
                                 }
                             }
                         }
