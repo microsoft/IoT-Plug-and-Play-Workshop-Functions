@@ -328,6 +328,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
 
                 if (response.GetRawResponse().Status == 200)
                 {
+                    bRet = true;
                     // Relationship created.
                     // Set occupied to tru
                     // bRet = await SetRoomOccupiedValue(roomTwin, true);
