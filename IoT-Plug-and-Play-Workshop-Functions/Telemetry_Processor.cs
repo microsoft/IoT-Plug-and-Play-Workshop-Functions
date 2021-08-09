@@ -284,7 +284,7 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                 if (roomTwin.Value.Contents.ContainsKey("unitId"))
                 {
                     featureId = roomTwin.Value.Contents["unitId"].ToString();
-                    _logger.LogInformation($"Found Unit ID {featureId}. Removing Azure Map State: Status {response.StatusCode}");
+                    _logger.LogInformation($"Found Unit ID {featureId}. Removing Azure Map State");
 
                     var response = await _httpClient.DeleteAsync(
                         $"https://us.atlas.microsoft.com/featureStateSets/{_mapStatesetId}/featureStates/{featureId}?stateKeyName=occupied&api-version=2.0&subscription-key={_mapKey}"
