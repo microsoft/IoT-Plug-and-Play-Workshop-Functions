@@ -296,11 +296,6 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                     }
                 }
 
-                //if (response.StatusCode < 200 || response.StatusCode > 299)
-                //{
-                //    return false;
-                //}
-
                 var adtResponse = await _adtClient.DeleteRelationshipAsync(incomingRelationship.SourceId, incomingRelationship.RelationshipId);
 
                 if (adtResponse.Status < 200 || adtResponse.Status > 299)
@@ -317,8 +312,6 @@ namespace IoT_Plug_and_Play_Workshop_Functions
             bool bRet = false;
 
             var roomTwin = await FindDigitalTwin(roomId, "dtmi:com:example:Room;2");
-
-            //roomTwin = await FindDigitalTwin(roomId, string.Empty);
 
             if (roomTwin != null)
             {
@@ -337,9 +330,6 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                 if (response.GetRawResponse().Status == 200)
                 {
                     bRet = true;
-                    // Relationship created.
-                    // Set occupied to tru
-                    // bRet = await SetRoomOccupiedValue(roomTwin, true);
                 }
             }
 
@@ -392,10 +382,6 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                         if (bRet == false)
                         {
                             _logger.LogError($"Failed to remove relationship between {roomId} and {deviceId}");
-                        }
-                        else
-                        {
-                            //bRet = await SetRoomOccupiedValue(parentTwins[0], false);
                         }
                     }
                     else if (!roomId.Equals("0") && parentTwins.Count == 0)
@@ -508,8 +494,6 @@ namespace IoT_Plug_and_Play_Workshop_Functions
                 // Step 3 : We have twin and Device Model
                 var tdList = new List<TELEMETRY_DATA>();
                 JObject signalRData = JObject.Parse(signalrData.data);
-
-                //List<KeyValuePair<Dtmi, DTEntityInfo>> dtComponentList = parsedModel.Where(r => r.Value.EntityKind == DTEntityKind.Component).ToList();
 
                 List<KeyValuePair<Dtmi, DTEntityInfo>> dtTelemetryList = parsedModel.Where(r => r.Value.EntityKind == DTEntityKind.Telemetry).ToList();
 
